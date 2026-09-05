@@ -237,21 +237,26 @@
     <!-- GYM -->
     <section class="view active" id="view-gym">
       <div class="card">
-        <h2>Today</h2>
-        <p class="sub">Mark whether you trained today.</p>
-        <button class="btn-primary" id="gymToggle">Mark as done</button>
+        <h2 id="gymTodayLabel">Today</h2>
+        <p class="sub" id="gymTodaySub">Nothing planned for today yet — add tasks below.</p>
+        <div id="gymTaskList"></div>
+        <button class="btn-primary" id="gymToggle" style="margin-top:12px;">Mark as done</button>
       </div>
       <div class="card">
-        <div class="row between">
-          <div>
-            <div class="big-num" id="gymStreak">0<span class="unit">day streak</span></div>
-          </div>
-        </div>
+        <div class="big-num" id="gymStreak">0<span class="unit">day streak</span></div>
         <div class="stat-pair">
           <div class="stat"><div class="n" id="gymBest">0</div><div class="l">Best streak</div></div>
           <div class="stat"><div class="n" id="gymTotal">0</div><div class="l">Total sessions</div></div>
         </div>
         <div class="heat" id="gymHeat"></div>
+      </div>
+      <div class="card">
+        <div class="row between">
+          <h2 style="margin:0;">Weekly plan</h2>
+          <button class="btn-ghost" id="gymPlanToggle">Edit</button>
+        </div>
+        <p class="sub">Set what you train each day. Add a video link if you're following a specific routine.</p>
+        <div id="gymPlanEditor" style="display:none;"></div>
       </div>
     </section>
 
@@ -359,10 +364,62 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 });
 
 // ---------- GYM ----------
+const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const esc = s => String(s).replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function getPlan(){ return load('gym_plan', {}); } // {0..6: [{id,name,url}]}
+function savePlan(p){ save('gym_plan', p); }
+function getDaily(){ return load('gym_daily', {}); } // {date: {taskId: true}}
+function saveDaily(d){ save('gym_daily', d); }
+
 function renderGym(){
-  const data = load('gym_log', {}); // {date: true}
+  const dow = new Date().getDay();
+  const plan = getPlan();
+  const todaysTasks = plan[dow] || [];
+  const daily = getDaily();
   const key = todayKey();
-  const doneToday = !!data[key];
+  const doneMap = daily[key] || {};
+
+  $('gymTodayLabel').textContent = DAY_NAMES[dow];
+
+  const list = $('gymTaskList');
+  if(todaysTasks.length === 0){
+    $('gymTodaySub').textContent = 'Nothing planned for today. Add tasks below, or just mark the day done.';
+    list.innerHTML = '';
+    $('gymToggle').style.display = 'block';
+  } else {
+    $('gymTodaySub').textContent = 'Tick off each task as you complete it.';
+    $('gymToggle').style.display = 'none';
+    list.innerHTML = '';
+    todaysTasks.forEach(t=>{
+      const row = document.createElement('div');
+      row.className = 'log-item';
+      row.style.alignItems = 'center';
+      const checked = !!doneMap[t.id];
+      row.innerHTML = `
+        <input type="checkbox" data-id="${t.id}" ${checked ? 'checked' : ''} style="width:20px; height:20px; accent-color:#C79A4B; flex-shrink:0;">
+        <div class="d" style="${checked ? 'color:var(--muted); text-decoration:line-through;' : ''}">${esc(t.name)}</div>
+        ${t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener" class="del" style="color:var(--accent); font-size:12px; text-decoration:none;">▶ Watch</a>` : ''}
+      `;
+      row.querySelector('input').addEventListener('change', (e)=>{
+        const d2 = getDaily();
+        if(!d2[key]) d2[key] = {};
+        d2[key][t.id] = e.target.checked;
+        saveDaily(d2);
+        // auto-mark day done in gym_log if all tasks checked
+        const allDone = todaysTasks.every(tt => d2[key][tt.id]);
+        const log = load('gym_log', {});
+        if(allDone){ log[key] = true; } else { delete log[key]; }
+        save('gym_log', log);
+        renderGym();
+      });
+      list.appendChild(row);
+    });
+  }
+
+  // toggle button (only meaningful when no planned tasks today)
+  const log = load('gym_log', {});
+  const doneToday = !!log[key];
   $('gymToggle').textContent = doneToday ? 'Done today ✓' : 'Mark as done';
   $('gymToggle').classList.toggle('done', doneToday);
 
@@ -370,10 +427,9 @@ function renderGym(){
   let streak = 0;
   for(let i=0;;i++){
     const k = daysAgoKey(i);
-    if(data[k]){ streak++; } else { if(i===0) continue; else break; }
+    if(log[k]){ streak++; } else { if(i===0) continue; else break; }
   }
-  // best streak + total
-  const dates = Object.keys(data).filter(k=>data[k]).sort();
+  const dates = Object.keys(log).filter(k=>log[k]).sort();
   let best=0, cur=0, prev=null;
   dates.forEach(d=>{
     if(prev){
@@ -387,24 +443,83 @@ function renderGym(){
   $('gymBest').textContent = best;
   $('gymTotal').textContent = dates.length;
 
-  // heatmap: last 30 days
   const heat = $('gymHeat');
   heat.innerHTML = '';
   for(let i=29;i>=0;i--){
     const k = daysAgoKey(i);
     const cell = document.createElement('div');
-    cell.className = 'cell' + (data[k] ? ' on' : '');
+    cell.className = 'cell' + (log[k] ? ' on' : '');
     heat.appendChild(cell);
   }
+
+  renderGymPlanEditor();
 }
 $('gymToggle').addEventListener('click', ()=>{
-  const data = load('gym_log', {});
+  const dow = new Date().getDay();
+  const plan = getPlan();
+  if((plan[dow]||[]).length > 0) return; // driven by checklist instead
+  const log = load('gym_log', {});
   const key = todayKey();
-  data[key] = !data[key];
-  if(!data[key]) delete data[key];
-  save('gym_log', data);
+  log[key] = !log[key];
+  if(!log[key]) delete log[key];
+  save('gym_log', log);
   renderGym();
 });
+
+// ---- weekly plan editor ----
+$('gymPlanToggle').addEventListener('click', ()=>{
+  const editor = $('gymPlanEditor');
+  const open = editor.style.display !== 'none';
+  editor.style.display = open ? 'none' : 'block';
+  $('gymPlanToggle').textContent = open ? 'Edit' : 'Close';
+  if(!open) renderGymPlanEditor();
+});
+
+function renderGymPlanEditor(){
+  const editor = $('gymPlanEditor');
+  if(editor.style.display === 'none') return;
+  const plan = getPlan();
+  editor.innerHTML = '';
+  DAY_NAMES.forEach((name, idx)=>{
+    const tasks = plan[idx] || [];
+    const block = document.createElement('div');
+    block.style.marginTop = '18px';
+    block.innerHTML = `
+      <div style="font-family:'Fraunces',serif; font-size:15px; margin-bottom:8px;">${name}</div>
+      <div class="plan-tasks-${idx}"></div>
+      <div class="row" style="margin-top:8px; gap:6px;">
+        <input type="text" placeholder="Task" class="plan-name-${idx}" style="flex:1.4;">
+        <input type="text" placeholder="Video link (optional)" class="plan-url-${idx}" style="flex:1.6;">
+      </div>
+      <button class="btn-ghost" style="margin-top:8px; width:100%; text-align:center;" data-day="${idx}">Add task</button>
+    `;
+    editor.appendChild(block);
+    const taskContainer = block.querySelector(`.plan-tasks-${idx}`);
+    tasks.forEach(t=>{
+      const row = document.createElement('div');
+      row.className = 'log-item';
+      row.innerHTML = `<div class="d">${esc(t.name)}${t.url ? ' <span style="color:var(--muted); font-size:12px;">· has link</span>' : ''}</div><button class="del" data-day="${idx}" data-taskid="${t.id}">✕</button>`;
+      taskContainer.appendChild(row);
+      row.querySelector('.del').addEventListener('click', ()=>{
+        const p2 = getPlan();
+        p2[idx] = (p2[idx]||[]).filter(x=>x.id !== t.id);
+        savePlan(p2);
+        renderGym();
+      });
+    });
+    block.querySelector('button[data-day]').addEventListener('click', ()=>{
+      const nameInput = block.querySelector(`.plan-name-${idx}`);
+      const urlInput = block.querySelector(`.plan-url-${idx}`);
+      const name2 = nameInput.value.trim();
+      if(!name2) return;
+      const p2 = getPlan();
+      if(!p2[idx]) p2[idx] = [];
+      p2[idx].push({ id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), name: name2, url: urlInput.value.trim() });
+      savePlan(p2);
+      renderGym();
+    });
+  });
+}
 
 // ---------- QURAN ----------
 function renderQuran(){
