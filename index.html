@@ -177,6 +177,16 @@
   .stat-pair .stat .n{font-family:'Fraunces',serif; font-size:22px; color:var(--accent);}
   .stat-pair .stat .l{font-size:12px; color:var(--muted); margin-top:2px;}
 
+  .stat-grid{
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:10px;
+  }
+  .stat-grid .stat{background:var(--surface-2); border-radius:10px; padding:12px 14px;}
+  .stat-grid .stat .n{font-family:'Fraunces',serif; font-size:20px; color:var(--accent);}
+  .stat-grid .stat .n .u{font-family:'Inter',sans-serif; font-size:12px; color:var(--muted); margin-left:4px;}
+  .stat-grid .stat .l{font-size:12px; color:var(--muted); margin-top:2px;}
+
   /* bottom nav */
   nav.tabs{
     position:fixed;
@@ -236,6 +246,16 @@
 
     <!-- GYM -->
     <section class="view active" id="view-gym">
+      <div class="card">
+        <h2>Stats</h2>
+        <div class="stat-grid">
+          <div class="stat"><div class="n">70<span class="u">kg</span></div><div class="l">Weight</div></div>
+          <div class="stat"><div class="n">175<span class="u">cm</span></div><div class="l">Height</div></div>
+          <div class="stat"><div class="n">25</div><div class="l">Age</div></div>
+          <div class="stat"><div class="n">1800<span class="u">kcal</span></div><div class="l">Eaten today</div></div>
+          <div class="stat"><div class="n">2200<span class="u">kcal</span></div><div class="l">Burned today</div></div>
+        </div>
+      </div>
       <div class="card">
         <h2 id="gymTodayLabel">Today</h2>
         <p class="sub" id="gymTodaySub">Nothing planned for today yet — add tasks below.</p>
@@ -367,10 +387,10 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const esc = s => String(s).replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-function getPlan(){ return load('gym_plan', {}); } // {0..6: [{id,name,url}]}
-function savePlan(p){ save('gym_plan', p); }
-function getDaily(){ return load('gym_daily', {}); } // {date: {taskId: true}}
-function saveDaily(d){ save('gym_daily', d); }
+function getPlan(){ return load('gym_plan_v2', {}); } // {0..6: [{id,name,url}]}
+function savePlan(p){ save('gym_plan_v2', p); }
+function getDaily(){ return load('gym_daily_v2', {}); } // {date: {taskId: true}}
+function saveDaily(d){ save('gym_daily_v2', d); }
 
 function renderGym(){
   const dow = new Date().getDay();
@@ -406,11 +426,11 @@ function renderGym(){
         if(!d2[key]) d2[key] = {};
         d2[key][t.id] = e.target.checked;
         saveDaily(d2);
-        // auto-mark day done in gym_log if all tasks checked
+        // auto-mark day done in gym_log_v2 if all tasks checked
         const allDone = todaysTasks.every(tt => d2[key][tt.id]);
-        const log = load('gym_log', {});
+        const log = load('gym_log_v2', {});
         if(allDone){ log[key] = true; } else { delete log[key]; }
-        save('gym_log', log);
+        save('gym_log_v2', log);
         renderGym();
       });
       list.appendChild(row);
@@ -418,7 +438,7 @@ function renderGym(){
   }
 
   // toggle button (only meaningful when no planned tasks today)
-  const log = load('gym_log', {});
+  const log = load('gym_log_v2', {});
   const doneToday = !!log[key];
   $('gymToggle').textContent = doneToday ? 'Done today ✓' : 'Mark as done';
   $('gymToggle').classList.toggle('done', doneToday);
@@ -458,11 +478,11 @@ $('gymToggle').addEventListener('click', ()=>{
   const dow = new Date().getDay();
   const plan = getPlan();
   if((plan[dow]||[]).length > 0) return; // driven by checklist instead
-  const log = load('gym_log', {});
+  const log = load('gym_log_v2', {});
   const key = todayKey();
   log[key] = !log[key];
   if(!log[key]) delete log[key];
-  save('gym_log', log);
+  save('gym_log_v2', log);
   renderGym();
 });
 
