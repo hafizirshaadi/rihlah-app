@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rihlah</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#141822">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Rihlah">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#141822;
+    --surface:#1D2331;
+    --surface-2:#242B3B;
+    --text:#EDEAE3;
+    --muted:#8D93A3;
+    --accent:#C79A4B;
+    --accent-dim:#8A7040;
+    --line:#2B3346;
+    --danger:#B85C5C;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overscroll-behavior-y:none;
+  }
+  .app{
+    max-width:480px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    padding-bottom:calc(72px + env(safe-area-inset-bottom));
+  }
+  header.top{
+    padding:28px 20px 14px;
+  }
+  header.top .date{
+    font-size:13px;
+    color:var(--muted);
+    letter-spacing:.02em;
+  }
+  header.top h1{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    font-size:28px;
+    margin:4px 0 0;
+  }
+  main{
+    flex:1;
+    padding:4px 20px 24px;
+  }
+  .view{display:none;}
+  .view.active{display:block; animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:20px;
+    margin-bottom:14px;
+  }
+  .card h2{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    font-size:17px;
+    margin:0 0 4px;
+  }
+  .card p.sub{
+    color:var(--muted);
+    font-size:13px;
+    margin:0 0 16px;
+    line-height:1.5;
+  }
+
+  .big-num{
+    font-family:'Fraunces',serif;
+    font-size:52px;
+    font-weight:500;
+    line-height:1;
+    color:var(--accent);
+  }
+  .big-num .unit{
+    font-family:'Inter',sans-serif;
+    font-size:15px;
+    color:var(--muted);
+    margin-left:8px;
+  }
+
+  .row{display:flex; gap:10px; align-items:center;}
+  .row.between{justify-content:space-between;}
+
+  button{
+    font-family:'Inter',sans-serif;
+    border:none;
+    cursor:pointer;
+  }
+  .btn-primary{
+    background:var(--accent);
+    color:#14181C;
+    font-weight:600;
+    font-size:15px;
+    padding:14px 20px;
+    border-radius:11px;
+    width:100%;
+  }
+  .btn-primary:active{background:var(--accent-dim);}
+  .btn-primary.done{
+    background:var(--surface-2);
+    color:var(--accent);
+    border:1px solid var(--accent-dim);
+  }
+  .btn-ghost{
+    background:transparent;
+    color:var(--muted);
+    font-size:13px;
+    padding:10px 14px;
+    border:1px solid var(--line);
+    border-radius:9px;
+  }
+  .btn-ghost:active{border-color:var(--accent-dim); color:var(--accent);}
+
+  input[type=number], input[type=text], input[type=time]{
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    font-size:16px;
+    padding:12px 14px;
+    border-radius:10px;
+    width:100%;
+  }
+  input:focus{outline:2px solid var(--accent-dim); outline-offset:1px;}
+
+  /* heatmap */
+  .heat{display:grid; grid-template-columns:repeat(10,1fr); gap:5px; margin-top:14px;}
+  .heat .cell{aspect-ratio:1; border-radius:4px; background:var(--surface-2);}
+  .heat .cell.on{background:var(--accent);}
+
+  /* log list */
+  .log-item{
+    display:flex;
+    gap:12px;
+    padding:12px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .log-item:last-child{border-bottom:none;}
+  .log-item .t{
+    font-family:'Fraunces',serif;
+    color:var(--accent);
+    font-size:14px;
+    min-width:52px;
+  }
+  .log-item .d{font-size:14px; flex:1; line-height:1.4;}
+  .log-item .del{color:var(--muted); font-size:12px; background:none; padding:0 4px;}
+  .empty{
+    color:var(--muted);
+    font-size:13px;
+    text-align:center;
+    padding:20px 0;
+  }
+
+  .stat-pair{display:flex; gap:12px; margin-top:14px;}
+  .stat-pair .stat{flex:1; background:var(--surface-2); border-radius:10px; padding:12px 14px;}
+  .stat-pair .stat .n{font-family:'Fraunces',serif; font-size:22px; color:var(--accent);}
+  .stat-pair .stat .l{font-size:12px; color:var(--muted); margin-top:2px;}
+
+  /* bottom nav */
+  nav.tabs{
+    position:fixed;
+    bottom:0; left:0; right:0;
+    background:rgba(20,24,34,.92);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    border-top:1px solid var(--line);
+    display:flex;
+    justify-content:center;
+    padding-bottom:env(safe-area-inset-bottom);
+    z-index:10;
+  }
+  nav.tabs .inner{
+    max-width:480px;
+    width:100%;
+    display:flex;
+  }
+  nav.tabs button{
+    background:none;
+    flex:1;
+    padding:12px 4px 10px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    color:var(--muted);
+    font-size:11px;
+  }
+  nav.tabs button svg{width:22px; height:22px; stroke:var(--muted); fill:none; stroke-width:1.6;}
+  nav.tabs button.active{color:var(--accent);}
+  nav.tabs button.active svg{stroke:var(--accent);}
+
+  textarea{
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    font-size:15px;
+    padding:12px 14px;
+    border-radius:10px;
+    width:100%;
+    resize:none;
+    min-height:70px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="date" id="todayLabel"></div>
+    <h1 id="pageTitle">Gym</h1>
+  </header>
+
+  <main>
+
+    <!-- GYM -->
+    <section class="view active" id="view-gym">
+      <div class="card">
+        <h2>Today</h2>
+        <p class="sub">Mark whether you trained today.</p>
+        <button class="btn-primary" id="gymToggle">Mark as done</button>
+      </div>
+      <div class="card">
+        <div class="row between">
+          <div>
+            <div class="big-num" id="gymStreak">0<span class="unit">day streak</span></div>
+          </div>
+        </div>
+        <div class="stat-pair">
+          <div class="stat"><div class="n" id="gymBest">0</div><div class="l">Best streak</div></div>
+          <div class="stat"><div class="n" id="gymTotal">0</div><div class="l">Total sessions</div></div>
+        </div>
+        <div class="heat" id="gymHeat"></div>
+      </div>
+    </section>
+
+    <!-- QURAN -->
+    <section class="view" id="view-quran">
+      <div class="card">
+        <h2>Today's reading</h2>
+        <p class="sub">Pages read today.</p>
+        <div class="row" style="margin-bottom:12px;">
+          <input type="number" id="quranInput" placeholder="0" min="0">
+          <button class="btn-primary" style="width:auto; white-space:nowrap;" id="quranSave">Save</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="big-num" id="quranTotal">0<span class="unit">pages total</span></div>
+        <div class="stat-pair">
+          <div class="stat"><div class="n" id="quranStreak">0</div><div class="l">Day streak</div></div>
+          <div class="stat"><div class="n" id="quranAvg">0</div><div class="l">Avg / day (30d)</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SABR (private) -->
+    <section class="view" id="view-sabr">
+      <div class="card">
+        <h2>Sabr</h2>
+        <p class="sub">Just for you. Between you and Allah.</p>
+        <div class="big-num" id="sabrDays">0<span class="unit">days</span></div>
+        <div class="stat-pair">
+          <div class="stat"><div class="n" id="sabrBest">0</div><div class="l">Best run</div></div>
+          <div class="stat"><div class="n" id="sabrResets">0</div><div class="l">Resets logged</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <button class="btn-ghost" style="width:100%; text-align:center;" id="sabrReset">Log a reset</button>
+      </div>
+    </section>
+
+    <!-- 24H LOG -->
+    <section class="view" id="view-log">
+      <div class="card">
+        <h2>Add entry</h2>
+        <div class="row" style="margin-bottom:10px;">
+          <input type="time" id="logTime" style="max-width:120px;">
+        </div>
+        <textarea id="logText" placeholder="What are you doing right now?"></textarea>
+        <button class="btn-primary" id="logSave" style="margin-top:10px;">Add to today</button>
+      </div>
+      <div class="card">
+        <h2>Today</h2>
+        <div id="logList"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="tabs">
+    <div class="inner">
+      <button class="tab-btn active" data-view="gym" data-title="Gym">
+        <svg viewBox="0 0 24 24"><path d="M6 8v8M18 8v8M2 11v2M22 11v2M6 12h12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Gym
+      </button>
+      <button class="tab-btn" data-view="quran" data-title="Qur'an">
+        <svg viewBox="0 0 24 24"><path d="M4 5c3-1.5 6-1.5 8 0v14c-2-1.5-5-1.5-8 0V5zM20 5c-3-1.5-6-1.5-8 0v14c2-1.5 5-1.5 8 0V5z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Qur'an
+      </button>
+      <button class="tab-btn" data-view="sabr" data-title="Sabr">
+        <svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9C.5 8 3 4 7 4c2 0 4 1 5 3 1-2 3-3 5-3 4 0 6.5 4 4.5 8-2.5 4.5-9.5 9-9.5 9z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Sabr
+      </button>
+      <button class="tab-btn" data-view="log" data-title="24h Log">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Log
+      </button>
+    </div>
+  </nav>
+</div>
+
+<script>
+// ---------- helpers ----------
+const $ = id => document.getElementById(id);
+const todayKey = () => {
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+};
+const daysAgoKey = n => {
+  const d = new Date();
+  d.setDate(d.getDate()-n);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+};
+const load = (k,fallback) => { try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } };
+const save = (k,v) => localStorage.setItem(k, JSON.stringify(v));
+
+$('todayLabel').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long', day:'numeric', month:'long'});
+
+// ---------- nav ----------
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    btn.classList.add('active');
+    $('view-'+btn.dataset.view).classList.add('active');
+    $('pageTitle').textContent = btn.dataset.title;
+  });
+});
+
+// ---------- GYM ----------
+function renderGym(){
+  const data = load('gym_log', {}); // {date: true}
+  const key = todayKey();
+  const doneToday = !!data[key];
+  $('gymToggle').textContent = doneToday ? 'Done today ✓' : 'Mark as done';
+  $('gymToggle').classList.toggle('done', doneToday);
+
+  // streak
+  let streak = 0;
+  for(let i=0;;i++){
+    const k = daysAgoKey(i);
+    if(data[k]){ streak++; } else { if(i===0) continue; else break; }
+  }
+  // best streak + total
+  const dates = Object.keys(data).filter(k=>data[k]).sort();
+  let best=0, cur=0, prev=null;
+  dates.forEach(d=>{
+    if(prev){
+      const diff = (new Date(d) - new Date(prev)) / 86400000;
+      cur = diff===1 ? cur+1 : 1;
+    } else { cur = 1; }
+    best = Math.max(best, cur);
+    prev = d;
+  });
+  $('gymStreak').innerHTML = streak + '<span class="unit">day streak</span>';
+  $('gymBest').textContent = best;
+  $('gymTotal').textContent = dates.length;
+
+  // heatmap: last 30 days
+  const heat = $('gymHeat');
+  heat.innerHTML = '';
+  for(let i=29;i>=0;i--){
+    const k = daysAgoKey(i);
+    const cell = document.createElement('div');
+    cell.className = 'cell' + (data[k] ? ' on' : '');
+    heat.appendChild(cell);
+  }
+}
+$('gymToggle').addEventListener('click', ()=>{
+  const data = load('gym_log', {});
+  const key = todayKey();
+  data[key] = !data[key];
+  if(!data[key]) delete data[key];
+  save('gym_log', data);
+  renderGym();
+});
+
+// ---------- QURAN ----------
+function renderQuran(){
+  const data = load('quran_log', {}); // {date: pages}
+  const key = todayKey();
+  $('quranInput').value = data[key] || '';
+  const total = Object.values(data).reduce((a,b)=>a+b,0);
+  $('quranTotal').innerHTML = total + '<span class="unit">pages total</span>';
+
+  let streak = 0;
+  for(let i=0;;i++){
+    const k = daysAgoKey(i);
+    if(data[k] > 0){ streak++; } else { if(i===0) continue; else break; }
+  }
+  $('quranStreak').textContent = streak;
+
+  let sum30=0;
+  for(let i=0;i<30;i++){ sum30 += data[daysAgoKey(i)] || 0; }
+  $('quranAvg').textContent = (sum30/30).toFixed(1);
+}
+$('quranSave').addEventListener('click', ()=>{
+  const data = load('quran_log', {});
+  const key = todayKey();
+  const val = parseInt($('quranInput').value || '0', 10);
+  data[key] = val;
+  save('quran_log', data);
+  renderQuran();
+});
+
+// ---------- SABR ----------
+function renderSabr(){
+  const state = load('sabr_state', { startDate: todayKey(), best: 0, resets: 0 });
+  const start = new Date(state.startDate);
+  const now = new Date();
+  const days = Math.floor((now - start) / 86400000);
+  $('sabrDays').innerHTML = days + '<span class="unit">days</span>';
+  $('sabrBest').textContent = Math.max(state.best, days);
+  $('sabrResets').textContent = state.resets;
+}
+$('sabrReset').addEventListener('click', ()=>{
+  if(!confirm('Log a reset? This starts the count over from today.')) return;
+  const state = load('sabr_state', { startDate: todayKey(), best: 0, resets: 0 });
+  const start = new Date(state.startDate);
+  const days = Math.floor((new Date() - start) / 86400000);
+  state.best = Math.max(state.best, days);
+  state.resets = (state.resets||0) + 1;
+  state.startDate = todayKey();
+  save('sabr_state', state);
+  renderSabr();
+});
+
+// ---------- 24H LOG ----------
+function renderLog(){
+  const data = load('day_log', {}); // {date: [{time,text}]}
+  const key = todayKey();
+  const entries = data[key] || [];
+  const list = $('logList');
+  if(entries.length === 0){
+    list.innerHTML = '<div class="empty">No entries yet today. Add what you\'re doing above.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  entries.slice().sort((a,b)=> a.time.localeCompare(b.time)).forEach((e,idx)=>{
+    const row = document.createElement('div');
+    row.className = 'log-item';
+    row.innerHTML = `<div class="t">${e.time}</div><div class="d">${e.text.replace(/</g,'&lt;')}</div><button class="del" data-idx="${idx}">✕</button>`;
+    list.appendChild(row);
+  });
+  list.querySelectorAll('.del').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const data = load('day_log', {});
+      const key = todayKey();
+      const sorted = (data[key]||[]).slice().sort((a,b)=> a.time.localeCompare(b.time));
+      sorted.splice(parseInt(btn.dataset.idx,10),1);
+      data[key] = sorted;
+      save('day_log', data);
+      renderLog();
+    });
+  });
+}
+$('logTime').value = new Date().toTimeString().slice(0,5);
+$('logSave').addEventListener('click', ()=>{
+  const text = $('logText').value.trim();
+  if(!text) return;
+  const data = load('day_log', {});
+  const key = todayKey();
+  if(!data[key]) data[key] = [];
+  data[key].push({ time: $('logTime').value || '00:00', text });
+  save('day_log', data);
+  $('logText').value = '';
+  $('logTime').value = new Date().toTimeString().slice(0,5);
+  renderLog();
+});
+
+// ---------- init ----------
+renderGym();
+renderQuran();
+renderSabr();
+renderLog();
+
+// ---------- service worker ----------
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
