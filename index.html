@@ -187,6 +187,52 @@
   .stat-grid .stat .n .u{font-family:'Inter',sans-serif; font-size:12px; color:var(--muted); margin-left:4px;}
   .stat-grid .stat .l{font-size:12px; color:var(--muted); margin-top:2px;}
 
+  /* greeting */
+  .greet-block{padding:4px 0 16px;}
+  .greet-time{font-size:13px; color:var(--muted); letter-spacing:.02em;}
+  .greet-name{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    font-size:24px;
+    margin-top:2px;
+  }
+  .greet-name::after{content:' ✎'; font-size:14px; color:var(--muted); font-family:'Inter',sans-serif;}
+
+  /* mini profile stats */
+  .mini-stats{display:flex; gap:10px; margin-bottom:16px;}
+  .mini-stat{
+    flex:1;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:8px 10px;
+    text-align:center;
+  }
+  .mini-stat .v{font-family:'Fraunces',serif; font-size:16px; color:var(--text);}
+  .mini-stat .u{font-size:11px; color:var(--muted); margin-left:3px;}
+
+  /* colorful overview widgets */
+  .widget-grid{
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:10px;
+  }
+  .widget{
+    background:color-mix(in srgb, var(--wc) 14%, var(--surface-2));
+    border:1px solid color-mix(in srgb, var(--wc) 35%, var(--line));
+    border-radius:12px;
+    padding:12px 12px 11px;
+  }
+  .w-top{display:flex; align-items:center; gap:6px; margin-bottom:6px;}
+  .w-icon{font-size:14px;}
+  .w-label{font-size:12px; color:var(--muted); font-weight:500;}
+  .w-value{font-family:'Fraunces',serif; font-size:18px; color:var(--wc);}
+  .w-value .sep{color:var(--muted); font-family:'Inter',sans-serif; font-size:13px; margin:0 2px;}
+  .w-value .tgt{color:var(--muted); font-family:'Inter',sans-serif; font-size:13px;}
+  .w-value .unit{font-family:'Inter',sans-serif; font-size:11px; color:var(--muted); margin-left:3px;}
+  .w-bar{background:rgba(255,255,255,.08); border-radius:6px; height:5px; margin-top:8px; overflow:hidden;}
+  .w-fill{background:var(--wc); height:100%; border-radius:6px; transition:width .3s ease;}
+
   /* bottom nav */
   nav.tabs{
     position:fixed;
@@ -246,8 +292,42 @@
 
     <!-- GYM -->
     <section class="view active" id="view-gym">
+      <div class="greet-block">
+        <div class="greet-time" id="greetTime">Good morning</div>
+        <div class="greet-name" id="greetName" data-edit="name">Name</div>
+      </div>
+
+      <div class="mini-stats">
+        <div class="mini-stat" data-edit="weight"><span class="v" id="statWeight">70</span><span class="u">kg</span></div>
+        <div class="mini-stat" data-edit="height"><span class="v" id="statHeight">175</span><span class="u">cm</span></div>
+        <div class="mini-stat" data-edit="age"><span class="v" id="statAge">25</span><span class="u">yrs</span></div>
+      </div>
+
       <div class="card">
-        <p class="empty">Gym tab is empty — tell me what to build here.</p>
+        <h2 style="margin-bottom:14px;">Overview</h2>
+        <div class="widget-grid">
+          <div class="widget" data-metric="calories" style="--wc:#E8935B;">
+            <div class="w-top"><span class="w-icon">🔥</span><span class="w-label">Calories</span></div>
+            <div class="w-value"><span class="cur" data-role="cur">1300</span><span class="sep">/</span><span class="tgt" data-role="tgt">1800</span><span class="unit">cal</span></div>
+            <div class="w-bar"><div class="w-fill" style="width:0%"></div></div>
+          </div>
+          <div class="widget" data-metric="protein" style="--wc:#D1687A;">
+            <div class="w-top"><span class="w-icon">🥩</span><span class="w-label">Protein</span></div>
+            <div class="w-value"><span class="cur" data-role="cur">0</span><span class="sep">/</span><span class="tgt" data-role="tgt">120</span><span class="unit">g</span></div>
+            <div class="w-bar"><div class="w-fill" style="width:0%"></div></div>
+          </div>
+          <div class="widget" data-metric="water" style="--wc:#5B9BD9;">
+            <div class="w-top"><span class="w-icon">💧</span><span class="w-label">Water</span></div>
+            <div class="w-value"><span class="cur" data-role="cur">0</span><span class="sep">/</span><span class="tgt" data-role="tgt">2000</span><span class="unit">ml</span></div>
+            <div class="w-bar"><div class="w-fill" style="width:0%"></div></div>
+          </div>
+          <div class="widget" data-metric="steps" style="--wc:#6FA97A;">
+            <div class="w-top"><span class="w-icon">👣</span><span class="w-label">Steps</span></div>
+            <div class="w-value"><span class="cur" data-role="cur">0</span><span class="sep">/</span><span class="tgt" data-role="tgt">10000</span><span class="unit"></span></div>
+            <div class="w-bar"><div class="w-fill" style="width:0%"></div></div>
+          </div>
+        </div>
+        <p class="sub" style="margin:14px 0 0;">Tap a number to update it. Tap the target to change your goal.</p>
       </div>
     </section>
 
@@ -354,7 +434,100 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   });
 });
 // ---------- GYM ----------
-// (empty — rebuilding)
+function getProfile(){ return load('profile_v1', { name:'Tap to set name', weight:70, height:175, age:25 }); }
+function saveProfile(p){ save('profile_v1', p); }
+function getOverview(){
+  return load('overview_v1', {
+    calories:{cur:1300, tgt:1800},
+    protein:{cur:0, tgt:120},
+    water:{cur:0, tgt:2000},
+    steps:{cur:0, tgt:10000}
+  });
+}
+function saveOverview(o){ save('overview_v1', o); }
+
+function greetingForHour(h){
+  if(h < 5) return 'Good night';
+  if(h < 12) return 'Good morning';
+  if(h < 17) return 'Good afternoon';
+  if(h < 21) return 'Good evening';
+  return 'Good night';
+}
+
+function renderGym(){
+  $('greetTime').textContent = greetingForHour(new Date().getHours());
+
+  const profile = getProfile();
+  $('greetName').textContent = profile.name;
+  $('statWeight').textContent = profile.weight;
+  $('statHeight').textContent = profile.height;
+  $('statAge').textContent = profile.age;
+
+  const overview = getOverview();
+  document.querySelectorAll('.widget').forEach(w=>{
+    const metric = w.dataset.metric;
+    const m = overview[metric];
+    w.querySelector('[data-role="cur"]').textContent = m.cur;
+    w.querySelector('[data-role="tgt"]').textContent = m.tgt;
+    const pct = m.tgt > 0 ? Math.min(100, Math.round((m.cur / m.tgt) * 100)) : 0;
+    w.querySelector('.w-fill').style.width = pct + '%';
+  });
+}
+
+// tap name to edit
+$('greetName').addEventListener('click', ()=>{
+  const profile = getProfile();
+  const val = prompt('Your name:', profile.name === 'Tap to set name' ? '' : profile.name);
+  if(val === null) return;
+  profile.name = val.trim() || 'Tap to set name';
+  saveProfile(profile);
+  renderGym();
+});
+
+// tap mini stat to edit
+document.querySelectorAll('.mini-stat').forEach(el=>{
+  el.addEventListener('click', ()=>{
+    const key = el.dataset.edit;
+    const profile = getProfile();
+    const labels = { weight:'Weight (kg)', height:'Height (cm)', age:'Age' };
+    const val = prompt(labels[key] + ':', profile[key]);
+    if(val === null) return;
+    const num = parseFloat(val);
+    if(isNaN(num)) return;
+    profile[key] = num;
+    saveProfile(profile);
+    renderGym();
+  });
+});
+
+// tap widget current/target to edit
+document.querySelectorAll('.widget').forEach(w=>{
+  const metric = w.dataset.metric;
+  const labels = { calories:'Calories', protein:'Protein (g)', water:'Water (ml)', steps:'Steps' };
+  w.querySelector('[data-role="cur"]').addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const overview = getOverview();
+    const val = prompt(labels[metric] + ' — current:', overview[metric].cur);
+    if(val === null) return;
+    const num = parseFloat(val);
+    if(isNaN(num)) return;
+    overview[metric].cur = num;
+    saveOverview(overview);
+    renderGym();
+  });
+  w.querySelector('[data-role="tgt"]').addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const overview = getOverview();
+    const val = prompt(labels[metric] + ' — target:', overview[metric].tgt);
+    if(val === null) return;
+    const num = parseFloat(val);
+    if(isNaN(num)) return;
+    overview[metric].tgt = num;
+    saveOverview(overview);
+    renderGym();
+  });
+});
+
 // ---------- QURAN ----------
 function renderQuran(){
   const data = load('quran_log', {}); // {date: pages}
@@ -449,6 +622,7 @@ $('logSave').addEventListener('click', ()=>{
 });
 
 // ---------- init ----------
+renderGym();
 renderQuran();
 renderSabr();
 renderLog();
