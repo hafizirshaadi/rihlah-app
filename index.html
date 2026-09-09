@@ -233,6 +233,29 @@
   .w-bar{background:rgba(255,255,255,.08); border-radius:6px; height:5px; margin-top:8px; overflow:hidden;}
   .w-fill{background:var(--wc); height:100%; border-radius:6px; transition:width .3s ease;}
 
+  /* segmented 3-column switcher */
+  .seg-row{
+    display:flex;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:11px;
+    padding:3px;
+    margin:16px 0 14px;
+    gap:3px;
+  }
+  .seg-btn{
+    flex:1;
+    background:transparent;
+    color:var(--muted);
+    font-size:12.5px;
+    font-weight:500;
+    padding:9px 4px;
+    border-radius:8px;
+  }
+  .seg-btn.active{background:var(--surface-2); color:var(--accent);}
+  .panel{display:none;}
+  .panel.active{display:block; animation:fade .2s ease;}
+
   /* bottom nav */
   nav.tabs{
     position:fixed;
@@ -328,6 +351,48 @@
           </div>
         </div>
         <p class="sub" style="margin:14px 0 0;">Tap a number to update it. Tap the target to change your goal.</p>
+      </div>
+
+      <div class="seg-row">
+        <button class="seg-btn active" data-panel="exercise">Exercise</button>
+        <button class="seg-btn" data-panel="recipes">Food Recipes</button>
+        <button class="seg-btn" data-panel="calc">Calculator</button>
+      </div>
+
+      <!-- EXERCISE PANEL -->
+      <div class="card panel active" id="panel-exercise">
+        <h2>Exercises</h2>
+        <div id="exerciseList"></div>
+        <div class="row" style="margin-top:10px; gap:6px;">
+          <input type="text" id="exName" placeholder="Exercise">
+          <input type="text" id="exSets" placeholder="Sets x reps" style="max-width:110px;">
+        </div>
+        <button class="btn-primary" id="exAdd" style="margin-top:10px;">Add exercise</button>
+      </div>
+
+      <!-- FOOD RECIPES PANEL -->
+      <div class="card panel" id="panel-recipes">
+        <h2>Recipes</h2>
+        <div id="recipeList"></div>
+        <input type="text" id="recTitle" placeholder="Recipe name" style="margin-top:10px;">
+        <textarea id="recBody" placeholder="Ingredients & steps..." style="margin-top:8px;"></textarea>
+        <button class="btn-primary" id="recAdd" style="margin-top:10px;">Add recipe</button>
+      </div>
+
+      <!-- CALORIE CALCULATOR PANEL -->
+      <div class="card panel" id="panel-calc">
+        <h2>Calorie calculator</h2>
+        <div id="calcList"></div>
+        <div class="row between" style="margin:10px 0;">
+          <span class="sub" style="margin:0;">Total</span>
+          <span class="big-num" id="calcTotal" style="font-size:24px;">0<span class="unit">cal</span></span>
+        </div>
+        <div class="row" style="gap:6px;">
+          <input type="text" id="calcName" placeholder="Food item">
+          <input type="number" id="calcCal" placeholder="cal" style="max-width:90px;">
+        </div>
+        <button class="btn-primary" id="calcAdd" style="margin-top:10px;">Add item</button>
+        <button class="btn-ghost" id="calcLog" style="margin-top:8px; width:100%; text-align:center;">Add total to today's Calories</button>
       </div>
     </section>
 
@@ -528,6 +593,119 @@ document.querySelectorAll('.widget').forEach(w=>{
   });
 });
 
+// ---- segmented switcher ----
+document.querySelectorAll('.seg-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    $('panel-'+btn.dataset.panel).classList.add('active');
+  });
+});
+
+// ---- exercises ----
+function renderExercises(){
+  const items = load('exercises_v1', []);
+  const list = $('exerciseList');
+  if(items.length === 0){
+    list.innerHTML = '<div class="empty">No exercises yet. Add one below.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  items.forEach(it=>{
+    const row = document.createElement('div');
+    row.className = 'log-item';
+    row.innerHTML = `<div class="d"><strong>${esc(it.name)}</strong>${it.sets ? ' — '+esc(it.sets) : ''}</div><button class="del" data-id="${it.id}">✕</button>`;
+    row.querySelector('.del').addEventListener('click', ()=>{
+      save('exercises_v1', load('exercises_v1', []).filter(x=>x.id !== it.id));
+      renderExercises();
+    });
+    list.appendChild(row);
+  });
+}
+$('exAdd').addEventListener('click', ()=>{
+  const name = $('exName').value.trim();
+  if(!name) return;
+  const items = load('exercises_v1', []);
+  items.push({ id: Date.now().toString(36), name, sets: $('exSets').value.trim() });
+  save('exercises_v1', items);
+  $('exName').value = ''; $('exSets').value = '';
+  renderExercises();
+});
+
+// ---- recipes ----
+function renderRecipes(){
+  const items = load('recipes_v1', []);
+  const list = $('recipeList');
+  if(items.length === 0){
+    list.innerHTML = '<div class="empty">No recipes yet. Add one below.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  items.forEach(it=>{
+    const row = document.createElement('div');
+    row.className = 'card';
+    row.style.padding = '12px 14px';
+    row.style.marginBottom = '8px';
+    row.innerHTML = `<div class="row between"><strong style="font-family:'Fraunces',serif; font-size:14px;">${esc(it.title)}</strong><button class="del" data-id="${it.id}">✕</button></div><div class="sub" style="margin:6px 0 0; white-space:pre-wrap;">${esc(it.body)}</div>`;
+    row.querySelector('.del').addEventListener('click', ()=>{
+      save('recipes_v1', load('recipes_v1', []).filter(x=>x.id !== it.id));
+      renderRecipes();
+    });
+    list.appendChild(row);
+  });
+}
+$('recAdd').addEventListener('click', ()=>{
+  const title = $('recTitle').value.trim();
+  const body = $('recBody').value.trim();
+  if(!title) return;
+  const items = load('recipes_v1', []);
+  items.push({ id: Date.now().toString(36), title, body });
+  save('recipes_v1', items);
+  $('recTitle').value = ''; $('recBody').value = '';
+  renderRecipes();
+});
+
+// ---- calorie calculator ----
+function renderCalc(){
+  const items = load('calc_items_v1', []);
+  const list = $('calcList');
+  list.innerHTML = '';
+  items.forEach(it=>{
+    const row = document.createElement('div');
+    row.className = 'log-item';
+    row.innerHTML = `<div class="d">${esc(it.name)}</div><div class="d" style="flex:0; color:var(--accent); margin-right:8px;">${it.cal}</div><button class="del" data-id="${it.id}">✕</button>`;
+    row.querySelector('.del').addEventListener('click', ()=>{
+      save('calc_items_v1', load('calc_items_v1', []).filter(x=>x.id !== it.id));
+      renderCalc();
+    });
+    list.appendChild(row);
+  });
+  const total = items.reduce((a,b)=>a+b.cal, 0);
+  $('calcTotal').innerHTML = total + '<span class="unit">cal</span>';
+}
+$('calcAdd').addEventListener('click', ()=>{
+  const name = $('calcName').value.trim();
+  const cal = parseFloat($('calcCal').value);
+  if(!name || isNaN(cal)) return;
+  const items = load('calc_items_v1', []);
+  items.push({ id: Date.now().toString(36), name, cal });
+  save('calc_items_v1', items);
+  $('calcName').value = ''; $('calcCal').value = '';
+  renderCalc();
+});
+$('calcLog').addEventListener('click', ()=>{
+  const items = load('calc_items_v1', []);
+  const total = items.reduce((a,b)=>a+b.cal, 0);
+  if(total === 0) return;
+  const overview = getOverview();
+  overview.calories.cur += total;
+  saveOverview(overview);
+  save('calc_items_v1', []);
+  renderCalc();
+  renderGym();
+});
+
 // ---------- QURAN ----------
 function renderQuran(){
   const data = load('quran_log', {}); // {date: pages}
@@ -623,6 +801,9 @@ $('logSave').addEventListener('click', ()=>{
 
 // ---------- init ----------
 renderGym();
+renderExercises();
+renderRecipes();
+renderCalc();
 renderQuran();
 renderSabr();
 renderLog();
