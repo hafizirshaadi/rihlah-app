@@ -472,18 +472,36 @@
 
       <!-- CALORIE CALCULATOR PANEL -->
       <div class="card panel" id="panel-calc">
-        <h2>Calorie calculator</h2>
-        <div id="calcList"></div>
-        <div class="row between" style="margin:10px 0;">
-          <span class="sub" style="margin:0;">Total</span>
-          <span class="big-num" id="calcTotal" style="font-size:24px;">0<span class="unit">cal</span></span>
+        <div class="row between">
+          <h2 style="margin:0;">AI Food Scanner</h2>
+          <button class="ex-menu" id="apiKeyBtn">⚙︎</button>
         </div>
-        <div class="row" style="gap:6px;">
-          <input type="text" id="calcName" placeholder="Food item">
-          <input type="number" id="calcCal" placeholder="cal" style="max-width:90px;">
+        <p class="sub" id="apiKeyStatus">Checking API key...</p>
+
+        <div id="scanImgPreviewWrap" style="display:none; margin-bottom:12px;">
+          <img id="scanImgPreview" style="width:100%; border-radius:10px; display:block;">
         </div>
-        <button class="btn-primary" id="calcAdd" style="margin-top:10px;">Add item</button>
-        <button class="btn-ghost" id="calcLog" style="margin-top:8px; width:100%; text-align:center;">Add total to today's Calories</button>
+        <input type="file" id="scanFile" accept="image/*" capture="environment" style="display:none;">
+        <button class="btn-ghost" id="scanFileBtn" style="width:100%; text-align:center;">📷 Take / choose photo</button>
+
+        <textarea id="scanDesc" placeholder="Describe the food (e.g. nasi lemak with ayam goreng, extra sambal)" style="margin-top:10px;"></textarea>
+
+        <button class="btn-primary" id="scanSend" style="margin-top:10px;">Analyze</button>
+        <p class="sub" id="scanStatus" style="display:none; text-align:center; margin:10px 0 0;">Analyzing...</p>
+
+        <div class="card" id="scanResult" style="display:none; margin-top:14px;">
+          <h2 id="scanResultName">Result</h2>
+          <div class="stat-grid" style="grid-template-columns:repeat(4,1fr); gap:8px;">
+            <div class="stat"><div class="n" id="scanCal">0</div><div class="l">Calories</div></div>
+            <div class="stat"><div class="n" id="scanPro">0</div><div class="l">Protein g</div></div>
+            <div class="stat"><div class="n" id="scanCarb">0</div><div class="l">Carbs g</div></div>
+            <div class="stat"><div class="n" id="scanFat">0</div><div class="l">Fat g</div></div>
+          </div>
+          <button class="btn-primary" id="scanAddToday" style="margin-top:12px;">Add to today's Calories & Protein</button>
+        </div>
+
+        <h2 style="margin-top:20px;">History</h2>
+        <div id="foodHistory"></div>
       </div>
     </section>
 
@@ -905,45 +923,149 @@ $('recAdd').addEventListener('click', ()=>{
   renderRecipes();
 });
 
-// ---- calorie calculator ----
-function renderCalc(){
-  const items = load('calc_items_v1', []);
-  const list = $('calcList');
+// ---- AI food scanner ----
+function getApiKey(){ return localStorage.getItem('gemini_api_key') || ''; }
+function setApiKey(k){ localStorage.setItem('gemini_api_key', k); }
+function getFoodHistory(){ return load('food_history_v1', []); }
+function saveFoodHistory(h){ save('food_history_v1', h); }
+
+function renderApiKeyStatus(){
+  const k = getApiKey();
+  $('apiKeyStatus').textContent = k ? 'API key saved ✓ — tap ⚙︎ to change.' : 'No API key yet — tap ⚙︎ to add your free Gemini API key.';
+}
+$('apiKeyBtn').addEventListener('click', ()=>{
+  const cur = getApiKey();
+  const val = prompt('Paste your Gemini API key (from aistudio.google.com):', cur);
+  if(val === null) return;
+  setApiKey(val.trim());
+  renderApiKeyStatus();
+});
+
+let scanImageBase64 = null; // without data: prefix
+$('scanFileBtn').addEventListener('click', ()=> $('scanFile').click());
+$('scanFile').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    img.onload = ()=>{
+      const maxW = 800;
+      const scale = Math.min(1, maxW / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      scanImageBase64 = dataUrl.split(',')[1];
+      $('scanImgPreview').src = dataUrl;
+      $('scanImgPreviewWrap').style.display = 'block';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+$('scanSend').addEventListener('click', async ()=>{
+  const apiKey = getApiKey();
+  if(!apiKey){ alert('Add your Gemini API key first — tap ⚙︎.'); return; }
+  const desc = $('scanDesc').value.trim();
+  if(!scanImageBase64 && !desc){ alert('Add a photo or a description first.'); return; }
+
+  $('scanStatus').style.display = 'block';
+  $('scanResult').style.display = 'none';
+  $('scanSend').disabled = true;
+
+  const promptText = `You are a nutrition estimator for a food-tracking app. The user is based in Malaysia and commonly eats Malaysian-style food (e.g. nasi lemak, roti canai, mee goreng, nasi kandar, laksa, satay, kuih, teh tarik). Use that context when estimating portions and ingredients typical to Malaysian cooking (coconut milk, sambal, oil-fried items, etc), unless the description or photo clearly indicates otherwise.
+
+User description: "${desc || '(no description given, rely on the photo)'}"
+
+Estimate the food identity and its nutrition for the single serving shown/described. Respond with ONLY raw JSON, no markdown, no code fences, in exactly this shape:
+{"food":"short name","calories":number,"protein":number,"carbs":number,"fat":number}`;
+
+  const parts = [{ text: promptText }];
+  if(scanImageBase64){
+    parts.push({ inline_data: { mime_type: 'image/jpeg', data: scanImageBase64 } });
+  }
+
+  try{
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts }] })
+    });
+    const data = await resp.json();
+    if(!resp.ok){
+      throw new Error(data?.error?.message || 'Request failed');
+    }
+    let text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    text = text.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(text);
+
+    $('scanResultName').textContent = result.food || 'Result';
+    $('scanCal').textContent = Math.round(result.calories || 0);
+    $('scanPro').textContent = Math.round(result.protein || 0);
+    $('scanCarb').textContent = Math.round(result.carbs || 0);
+    $('scanFat').textContent = Math.round(result.fat || 0);
+    $('scanResult').style.display = 'block';
+    $('scanResult').dataset.pending = JSON.stringify(result);
+
+    const hist = getFoodHistory();
+    hist.unshift({
+      id: Date.now().toString(36),
+      date: todayKey(),
+      time: new Date().toTimeString().slice(0,5),
+      food: result.food || desc || 'Food',
+      calories: Math.round(result.calories || 0),
+      protein: Math.round(result.protein || 0),
+      carbs: Math.round(result.carbs || 0),
+      fat: Math.round(result.fat || 0)
+    });
+    saveFoodHistory(hist.slice(0, 100));
+    renderFoodHistory();
+  } catch(err){
+    alert('Could not analyze: ' + err.message);
+  } finally {
+    $('scanStatus').style.display = 'none';
+    $('scanSend').disabled = false;
+  }
+});
+
+$('scanAddToday').addEventListener('click', ()=>{
+  const pending = $('scanResult').dataset.pending;
+  if(!pending) return;
+  const result = JSON.parse(pending);
+  const overview = getOverview();
+  overview.calories.cur += Math.round(result.calories || 0);
+  overview.protein.cur += Math.round(result.protein || 0);
+  saveOverview(overview);
+  renderGym();
+  $('scanResult').style.display = 'none';
+  $('scanDesc').value = '';
+  $('scanImgPreviewWrap').style.display = 'none';
+  scanImageBase64 = null;
+});
+
+function renderFoodHistory(){
+  const hist = getFoodHistory();
+  const list = $('foodHistory');
+  if(hist.length === 0){
+    list.innerHTML = '<div class="empty">No scans yet.</div>';
+    return;
+  }
   list.innerHTML = '';
-  items.forEach(it=>{
+  hist.forEach(h=>{
     const row = document.createElement('div');
     row.className = 'log-item';
-    row.innerHTML = `<div class="d">${esc(it.name)}</div><div class="d" style="flex:0; color:var(--accent); margin-right:8px;">${it.cal}</div><button class="del" data-id="${it.id}">✕</button>`;
+    row.innerHTML = `<div class="d"><strong>${esc(h.food)}</strong><br><span style="color:var(--muted); font-size:12px;">${h.date} ${h.time} · ${h.calories} cal · P${h.protein} C${h.carbs} F${h.fat}</span></div><button class="del" data-id="${h.id}">✕</button>`;
     row.querySelector('.del').addEventListener('click', ()=>{
-      save('calc_items_v1', load('calc_items_v1', []).filter(x=>x.id !== it.id));
-      renderCalc();
+      saveFoodHistory(getFoodHistory().filter(x=>x.id !== h.id));
+      renderFoodHistory();
     });
     list.appendChild(row);
   });
-  const total = items.reduce((a,b)=>a+b.cal, 0);
-  $('calcTotal').innerHTML = total + '<span class="unit">cal</span>';
 }
-$('calcAdd').addEventListener('click', ()=>{
-  const name = $('calcName').value.trim();
-  const cal = parseFloat($('calcCal').value);
-  if(!name || isNaN(cal)) return;
-  const items = load('calc_items_v1', []);
-  items.push({ id: Date.now().toString(36), name, cal });
-  save('calc_items_v1', items);
-  $('calcName').value = ''; $('calcCal').value = '';
-  renderCalc();
-});
-$('calcLog').addEventListener('click', ()=>{
-  const items = load('calc_items_v1', []);
-  const total = items.reduce((a,b)=>a+b.cal, 0);
-  if(total === 0) return;
-  const overview = getOverview();
-  overview.calories.cur += total;
-  saveOverview(overview);
-  save('calc_items_v1', []);
-  renderCalc();
-  renderGym();
-});
 
 // ---------- QURAN ----------
 function renderQuran(){
@@ -1043,7 +1165,8 @@ renderGym();
 renderDayPicker();
 renderExercises();
 renderRecipes();
-renderCalc();
+renderApiKeyStatus();
+renderFoodHistory();
 renderQuran();
 renderSabr();
 renderLog();
