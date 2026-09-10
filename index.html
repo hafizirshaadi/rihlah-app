@@ -286,17 +286,37 @@
     display:flex; align-items:center; justify-content:center;
     font-size:16px; flex-shrink:0;
   }
-  .ex-name{font-family:'Fraunces',serif; font-weight:500; font-size:17px; flex:1;}
-  .ex-menu{color:var(--muted); font-size:13px; padding:4px 6px;}
+  .ex-name-input{
+    flex:1;
+    background:transparent;
+    border:none;
+    border-bottom:1px solid transparent;
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    font-size:17px;
+    color:var(--text);
+    padding:4px 2px;
+  }
+  .ex-name-input:focus{border-bottom-color:var(--accent-dim); outline:none;}
+  .ex-menu{color:var(--muted); font-size:13px; padding:4px 6px; flex-shrink:0;}
 
-  .ex-target{
-    display:inline-block;
+  .ex-target-row{
+    display:flex;
+    align-items:center;
+    gap:6px;
     background:var(--surface-2);
     color:var(--muted);
     font-size:12.5px;
-    padding:6px 12px;
+    padding:8px 12px;
     border-radius:8px;
     margin-bottom:12px;
+  }
+  .ex-target-row input{
+    width:40px;
+    padding:4px 6px;
+    font-size:13px;
+    text-align:center;
+    background:var(--surface);
   }
 
   .vid-wrap{
@@ -740,6 +760,7 @@ function renderExercises(){
 
     const card = document.createElement('div');
     card.className = 'ex-card';
+    card.dataset.exid = ex.id;
 
     let videoHtml = '';
     const info = toEmbedInfo(ex.videoUrl);
@@ -767,8 +788,7 @@ function renderExercises(){
     card.innerHTML = `
       <div class="ex-head">
         <div class="ex-icon">🏋️</div>
-        <div class="ex-name">${esc(ex.name)}</div>
-        <button class="ex-menu" data-action="edit">✎</button>
+        <input type="text" class="ex-name-input" placeholder="Exercise name" value="${esc(ex.name)}">
         <button class="ex-menu" data-action="delete">✕</button>
       </div>
       ${videoHtml}
@@ -776,7 +796,11 @@ function renderExercises(){
         <input type="text" class="vid-url-input" placeholder="Paste video link (YouTube/Instagram)" value="${esc(ex.videoUrl||'')}">
         <button class="btn-ghost vid-save">Save</button>
       </div>
-      <div class="ex-target">Target: ${ex.targetSets} sets x ${ex.targetReps} reps</div>
+      <div class="ex-target-row">
+        <span>Target:</span>
+        <input type="number" class="target-sets-input" value="${ex.targetSets}"> sets x
+        <input type="number" class="target-reps-input" value="${ex.targetReps}"> reps
+      </div>
       <div class="log-new-set-label" style="font-size:13px; color:var(--muted); margin-bottom:8px;">Log sets</div>
       ${setsHtml}
       <div class="ex-progress">
@@ -785,18 +809,23 @@ function renderExercises(){
       </div>
     `;
 
-    card.querySelector('[data-action="edit"]').addEventListener('click', ()=>{
-      const name = prompt('Exercise name:', ex.name); if(name === null) return;
-      const ts = prompt('Target sets:', ex.targetSets); if(ts === null) return;
-      const tr = prompt('Target reps:', ex.targetReps); if(tr === null) return;
-      ex.name = name.trim() || ex.name;
-      ex.targetSets = parseInt(ts,10) || ex.targetSets;
-      ex.targetReps = parseInt(tr,10) || ex.targetReps;
+    card.querySelector('.ex-name-input').addEventListener('input', (e)=>{
+      ex.name = e.target.value;
       saveExPlan(plan);
-      renderExercises();
+    });
+    card.querySelector('.target-sets-input').addEventListener('input', (e)=>{
+      const n = parseInt(e.target.value, 10);
+      if(!isNaN(n) && n > 0) ex.targetSets = n;
+      saveExPlan(plan);
+    });
+    card.querySelector('.target-sets-input').addEventListener('change', ()=> renderExercises());
+    card.querySelector('.target-reps-input').addEventListener('input', (e)=>{
+      const n = parseInt(e.target.value, 10);
+      if(!isNaN(n) && n > 0) ex.targetReps = n;
+      saveExPlan(plan);
     });
     card.querySelector('[data-action="delete"]').addEventListener('click', ()=>{
-      if(!confirm('Delete "'+ex.name+'"?')) return;
+      if(!confirm('Delete "'+(ex.name || 'this exercise')+'"?')) return;
       plan[exSelectedDay] = plan[exSelectedDay].filter(x=>x.id !== ex.id);
       saveExPlan(plan);
       renderExercises();
@@ -828,15 +857,18 @@ function renderExercises(){
 }
 
 $('exAddNew').addEventListener('click', ()=>{
-  const name = prompt('Exercise name:'); if(!name) return;
-  const ts = parseInt(prompt('Target sets:', '3'), 10) || 3;
-  const tr = parseInt(prompt('Target reps:', '10'), 10) || 10;
-  const videoUrl = (prompt('Video link (optional, paste YouTube/Instagram):', '') || '').trim();
   const plan = getExPlan();
   if(!plan[exSelectedDay]) plan[exSelectedDay] = [];
-  plan[exSelectedDay].push({ id: Date.now().toString(36)+Math.random().toString(36).slice(2,5), name: name.trim(), targetSets: ts, targetReps: tr, videoUrl });
+  const newId = Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  plan[exSelectedDay].push({ id: newId, name: '', targetSets: 3, targetReps: 10, videoUrl: '' });
   saveExPlan(plan);
   renderExercises();
+  const card = $('exerciseCards').querySelector(`[data-exid="${newId}"]`);
+  if(card){
+    card.scrollIntoView({ behavior:'smooth', block:'center' });
+    const nameInput = card.querySelector('.ex-name-input');
+    if(nameInput) nameInput.focus();
+  }
 });
 
 // ---- recipes ----
