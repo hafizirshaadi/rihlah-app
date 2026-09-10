@@ -349,6 +349,17 @@
   .stat-green{background:color-mix(in srgb, #6FA97A 14%, var(--surface-2)); border:1px solid color-mix(in srgb, #6FA97A 30%, var(--line));}
   .stat-rose{background:color-mix(in srgb, #D1687A 14%, var(--surface-2)); border:1px solid color-mix(in srgb, #D1687A 30%, var(--line));}
 
+  .day-group-header{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin:16px 0 8px; padding-bottom:6px; border-bottom:1px solid var(--line);
+  }
+  .day-group-header .dg-date{font-family:'Fraunces',serif; font-size:14px; color:var(--text);}
+  .day-group-header .dg-total{font-size:12.5px; color:var(--accent); font-weight:600;}
+  .meal-type-tag{
+    font-size:10.5px; color:var(--accent); background:var(--surface-2);
+    padding:2px 7px; border-radius:6px; margin-right:6px; display:inline-block;
+  }
+
   .greet-block{padding:4px 0 16px;}
   .greet-time{font-size:13px; color:var(--muted); letter-spacing:.02em;}
   .greet-name{
@@ -653,12 +664,57 @@
             </div>
           </div>
           <div class="gym-content-panel" data-section="workout"><p class="empty">Workout — empty for now.</p></div>
-          <div class="gym-content-panel" data-section="mealtracker"><p class="empty">AI Meal Tracker — empty for now.</p></div>
+          <div class="gym-content-panel" data-section="mealtracker">
+            <h2 class="section-h glow-orange">🍽️ AI Meal Tracker</h2>
+            <p class="sub">Snap, upload, or describe your food and get instant nutrition info.</p>
+
+            <div id="mtImgPreviewWrap" style="display:none; margin:10px 0;">
+              <img id="mtImgPreview" style="width:100%; border-radius:10px; display:block;">
+            </div>
+            <input type="file" id="mtFile" accept="image/*" capture="environment" style="display:none;">
+            <button class="btn-ghost" id="mtFileBtn" style="width:100%; text-align:center;">📷 Take / choose photo</button>
+
+            <textarea id="mtDesc" placeholder="Describe the food (e.g. nasi lemak with ayam goreng, extra sambal)" style="margin-top:10px;"></textarea>
+
+            <button class="btn-primary" id="mtSend" style="margin-top:10px;">Analyze</button>
+            <p class="sub" id="mtStatus" style="display:none; text-align:center; margin:10px 0 0;">Analyzing...</p>
+
+            <div class="card" id="mtResult" style="display:none; margin-top:14px;">
+              <h2 id="mtResultName">Result</h2>
+              <div class="stat-grid" style="grid-template-columns:repeat(4,1fr); gap:8px;">
+                <div class="stat stat-orange"><div class="n" id="mtCal">0</div><div class="l">🔥 Calories</div></div>
+                <div class="stat stat-rose"><div class="n" id="mtPro">0</div><div class="l">🥩 Protein g</div></div>
+                <div class="stat stat-blue"><div class="n" id="mtCarb">0</div><div class="l">🍚 Carbs g</div></div>
+                <div class="stat stat-green"><div class="n" id="mtFat">0</div><div class="l">🥑 Fat g</div></div>
+              </div>
+              <div class="row" style="gap:6px; margin-top:12px;">
+                <input type="date" id="mtDate" style="flex:1;">
+                <select id="mtMealType" style="flex:1;">
+                  <option>Breakfast</option>
+                  <option>Lunch</option>
+                  <option>Dinner</option>
+                  <option>Snack</option>
+                </select>
+              </div>
+              <button class="btn-primary" id="mtAddDiary" style="margin-top:10px;">Add to Diary</button>
+            </div>
+
+            <h2 class="section-h glow-blue" style="margin-top:22px;">📅 History</h2>
+            <div id="mtHistory"></div>
+          </div>
           <div class="gym-content-panel" data-section="recipes"><p class="empty">Recipes — empty for now.</p></div>
           <div class="gym-content-panel" data-section="calculator"><p class="empty">Health Calculator — empty for now.</p></div>
           <div class="gym-content-panel" data-section="coach"><p class="empty">AI Coach — empty for now.</p></div>
           <div class="gym-content-panel" data-section="progress"><p class="empty">Progress — empty for now.</p></div>
-          <div class="gym-content-panel" data-section="settings"><p class="empty">Settings — empty for now.</p></div>
+          <div class="gym-content-panel" data-section="settings">
+            <h2 class="section-h glow-blue">🔑 Gemini API Key</h2>
+            <p class="sub" id="apiKeyStatus">Checking API key...</p>
+            <div class="row" style="gap:6px; margin-top:8px;">
+              <input type="text" id="apiKeyInput" placeholder="Paste your Gemini API key">
+              <button class="btn-primary" id="apiKeySave" style="width:auto; white-space:nowrap;">Save</button>
+            </div>
+            <p class="sub" style="margin-top:10px;">Free at <strong>aistudio.google.com</strong> → Get API key. Used by the AI Meal Tracker to analyze food photos. Stored only on this device.</p>
+          </div>
         </div>
       </div>
 
@@ -705,7 +761,6 @@
       <div class="seg-row">
         <button class="seg-btn active" data-panel="exercise">Exercise</button>
         <button class="seg-btn" data-panel="recipes">Food Recipes</button>
-        <button class="seg-btn" data-panel="calc">Calculator</button>
       </div>
 
       <!-- EXERCISE PANEL -->
@@ -724,39 +779,6 @@
         <button class="btn-primary" id="recAdd" style="margin-top:10px;">Add recipe</button>
       </div>
 
-      <!-- CALORIE CALCULATOR PANEL -->
-      <div class="card panel" id="panel-calc">
-        <div class="row between">
-          <h2 style="margin:0;">AI Food Scanner</h2>
-          <button class="ex-menu" id="apiKeyBtn">⚙︎</button>
-        </div>
-        <p class="sub" id="apiKeyStatus">Checking API key...</p>
-
-        <div id="scanImgPreviewWrap" style="display:none; margin-bottom:12px;">
-          <img id="scanImgPreview" style="width:100%; border-radius:10px; display:block;">
-        </div>
-        <input type="file" id="scanFile" accept="image/*" capture="environment" style="display:none;">
-        <button class="btn-ghost" id="scanFileBtn" style="width:100%; text-align:center;">📷 Take / choose photo</button>
-
-        <textarea id="scanDesc" placeholder="Describe the food (e.g. nasi lemak with ayam goreng, extra sambal)" style="margin-top:10px;"></textarea>
-
-        <button class="btn-primary" id="scanSend" style="margin-top:10px;">Analyze</button>
-        <p class="sub" id="scanStatus" style="display:none; text-align:center; margin:10px 0 0;">Analyzing...</p>
-
-        <div class="card" id="scanResult" style="display:none; margin-top:14px;">
-          <h2 id="scanResultName">Result</h2>
-          <div class="stat-grid" style="grid-template-columns:repeat(4,1fr); gap:8px;">
-            <div class="stat"><div class="n" id="scanCal">0</div><div class="l">Calories</div></div>
-            <div class="stat"><div class="n" id="scanPro">0</div><div class="l">Protein g</div></div>
-            <div class="stat"><div class="n" id="scanCarb">0</div><div class="l">Carbs g</div></div>
-            <div class="stat"><div class="n" id="scanFat">0</div><div class="l">Fat g</div></div>
-          </div>
-          <button class="btn-primary" id="scanAddToday" style="margin-top:12px;">Add to today's Calories & Protein</button>
-        </div>
-
-        <h2 style="margin-top:20px;">History</h2>
-        <div id="foodHistory"></div>
-      </div>
       </div>
       <!-- /gymLegacyContent -->
     </section>
@@ -1325,27 +1347,27 @@ $('recAdd').addEventListener('click', ()=>{
   renderRecipes();
 });
 
-// ---- AI food scanner ----
+
+// ---- settings: Gemini API key ----
 function getApiKey(){ return localStorage.getItem('gemini_api_key') || ''; }
 function setApiKey(k){ localStorage.setItem('gemini_api_key', k); }
-function getFoodHistory(){ return load('food_history_v1', []); }
-function saveFoodHistory(h){ save('food_history_v1', h); }
-
 function renderApiKeyStatus(){
   const k = getApiKey();
-  $('apiKeyStatus').textContent = k ? 'API key saved ✓ — tap ⚙︎ to change.' : 'No API key yet — tap ⚙︎ to add your free Gemini API key.';
+  $('apiKeyStatus').textContent = k ? 'API key saved ✓' : 'No API key yet — paste one below.';
+  $('apiKeyInput').value = k;
 }
-$('apiKeyBtn').addEventListener('click', ()=>{
-  const cur = getApiKey();
-  const val = prompt('Paste your Gemini API key (from aistudio.google.com):', cur);
-  if(val === null) return;
-  setApiKey(val.trim());
+$('apiKeySave').addEventListener('click', ()=>{
+  setApiKey($('apiKeyInput').value.trim());
   renderApiKeyStatus();
 });
 
-let scanImageBase64 = null; // without data: prefix
-$('scanFileBtn').addEventListener('click', ()=> $('scanFile').click());
-$('scanFile').addEventListener('change', (e)=>{
+// ---- AI meal tracker ----
+function getFoodHistory(){ return load('food_history_v1', []); }
+function saveFoodHistory(h){ save('food_history_v1', h); }
+
+let mtImageBase64 = null;
+$('mtFileBtn').addEventListener('click', ()=> $('mtFile').click());
+$('mtFile').addEventListener('change', (e)=>{
   const file = e.target.files[0];
   if(!file) return;
   const img = new Image();
@@ -1360,24 +1382,24 @@ $('scanFile').addEventListener('change', (e)=>{
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-      scanImageBase64 = dataUrl.split(',')[1];
-      $('scanImgPreview').src = dataUrl;
-      $('scanImgPreviewWrap').style.display = 'block';
+      mtImageBase64 = dataUrl.split(',')[1];
+      $('mtImgPreview').src = dataUrl;
+      $('mtImgPreviewWrap').style.display = 'block';
     };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
 });
 
-$('scanSend').addEventListener('click', async ()=>{
+$('mtSend').addEventListener('click', async ()=>{
   const apiKey = getApiKey();
-  if(!apiKey){ alert('Add your Gemini API key first — tap ⚙︎.'); return; }
-  const desc = $('scanDesc').value.trim();
-  if(!scanImageBase64 && !desc){ alert('Add a photo or a description first.'); return; }
+  if(!apiKey){ alert('Add your Gemini API key first — go to Settings.'); return; }
+  const desc = $('mtDesc').value.trim();
+  if(!mtImageBase64 && !desc){ alert('Add a photo or a description first.'); return; }
 
-  $('scanStatus').style.display = 'block';
-  $('scanResult').style.display = 'none';
-  $('scanSend').disabled = true;
+  $('mtStatus').style.display = 'block';
+  $('mtResult').style.display = 'none';
+  $('mtSend').disabled = true;
 
   const promptText = `You are a nutrition estimator for a food-tracking app. The user is based in Malaysia and commonly eats Malaysian-style food (e.g. nasi lemak, roti canai, mee goreng, nasi kandar, laksa, satay, kuih, teh tarik). Use that context when estimating portions and ingredients typical to Malaysian cooking (coconut milk, sambal, oil-fried items, etc), unless the description or photo clearly indicates otherwise.
 
@@ -1387,12 +1409,12 @@ Estimate the food identity and its nutrition for the single serving shown/descri
 {"food":"short name","calories":number,"protein":number,"carbs":number,"fat":number}`;
 
   const parts = [{ text: promptText }];
-  if(scanImageBase64){
-    parts.push({ inline_data: { mime_type: 'image/jpeg', data: scanImageBase64 } });
+  if(mtImageBase64){
+    parts.push({ inline_data: { mime_type: 'image/jpeg', data: mtImageBase64 } });
   }
 
   try{
-    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts }] })
@@ -1405,67 +1427,91 @@ Estimate the food identity and its nutrition for the single serving shown/descri
     text = text.replace(/```json|```/g, '').trim();
     const result = JSON.parse(text);
 
-    $('scanResultName').textContent = result.food || 'Result';
-    $('scanCal').textContent = Math.round(result.calories || 0);
-    $('scanPro').textContent = Math.round(result.protein || 0);
-    $('scanCarb').textContent = Math.round(result.carbs || 0);
-    $('scanFat').textContent = Math.round(result.fat || 0);
-    $('scanResult').style.display = 'block';
-    $('scanResult').dataset.pending = JSON.stringify(result);
-
-    const hist = getFoodHistory();
-    hist.unshift({
-      id: Date.now().toString(36),
-      date: todayKey(),
-      time: new Date().toTimeString().slice(0,5),
-      food: result.food || desc || 'Food',
-      calories: Math.round(result.calories || 0),
-      protein: Math.round(result.protein || 0),
-      carbs: Math.round(result.carbs || 0),
-      fat: Math.round(result.fat || 0)
-    });
-    saveFoodHistory(hist.slice(0, 100));
-    renderFoodHistory();
+    $('mtResultName').textContent = result.food || 'Result';
+    $('mtCal').textContent = Math.round(result.calories || 0);
+    $('mtPro').textContent = Math.round(result.protein || 0);
+    $('mtCarb').textContent = Math.round(result.carbs || 0);
+    $('mtFat').textContent = Math.round(result.fat || 0);
+    $('mtResult').style.display = 'block';
+    $('mtResult').dataset.pending = JSON.stringify(result);
+    $('mtDate').value = todayKey();
   } catch(err){
     alert('Could not analyze: ' + err.message);
   } finally {
-    $('scanStatus').style.display = 'none';
-    $('scanSend').disabled = false;
+    $('mtStatus').style.display = 'none';
+    $('mtSend').disabled = false;
   }
 });
 
-$('scanAddToday').addEventListener('click', ()=>{
-  const pending = $('scanResult').dataset.pending;
+$('mtAddDiary').addEventListener('click', ()=>{
+  const pending = $('mtResult').dataset.pending;
   if(!pending) return;
   const result = JSON.parse(pending);
-  const overview = getOverview();
-  overview.calories.cur += Math.round(result.calories || 0);
-  overview.protein.cur += Math.round(result.protein || 0);
-  saveOverview(overview);
-  renderGym();
-  $('scanResult').style.display = 'none';
-  $('scanDesc').value = '';
-  $('scanImgPreviewWrap').style.display = 'none';
-  scanImageBase64 = null;
+  const date = $('mtDate').value || todayKey();
+  const mealType = $('mtMealType').value;
+
+  const hist = getFoodHistory();
+  hist.unshift({
+    id: Date.now().toString(36),
+    date,
+    time: new Date().toTimeString().slice(0,5),
+    mealType,
+    food: result.food || $('mtDesc').value.trim() || 'Food',
+    calories: Math.round(result.calories || 0),
+    protein: Math.round(result.protein || 0),
+    carbs: Math.round(result.carbs || 0),
+    fat: Math.round(result.fat || 0)
+  });
+  saveFoodHistory(hist.slice(0, 300));
+  renderMealHistory();
+
+  if(date === todayKey()){
+    const overview = getOverview();
+    overview.calories.cur += Math.round(result.calories || 0);
+    overview.protein.cur += Math.round(result.protein || 0);
+    saveOverview(overview);
+    renderGym();
+  }
+
+  $('mtResult').style.display = 'none';
+  $('mtDesc').value = '';
+  $('mtImgPreviewWrap').style.display = 'none';
+  mtImageBase64 = null;
 });
 
-function renderFoodHistory(){
+const MEAL_ICON = { Breakfast:'🌅', Lunch:'☀️', Dinner:'🌙', Snack:'🍎' };
+function renderMealHistory(){
   const hist = getFoodHistory();
-  const list = $('foodHistory');
+  const list = $('mtHistory');
   if(hist.length === 0){
-    list.innerHTML = '<div class="empty">No scans yet.</div>';
+    list.innerHTML = '<div class="empty">No meals logged yet.</div>';
     return;
   }
+  const byDate = {};
+  hist.forEach(h=>{ if(!byDate[h.date]) byDate[h.date] = []; byDate[h.date].push(h); });
+  const dates = Object.keys(byDate).sort().reverse();
+
   list.innerHTML = '';
-  hist.forEach(h=>{
-    const row = document.createElement('div');
-    row.className = 'log-item';
-    row.innerHTML = `<div class="d"><strong>${esc(h.food)}</strong><br><span style="color:var(--muted); font-size:12px;">${h.date} ${h.time} · ${h.calories} cal · P${h.protein} C${h.carbs} F${h.fat}</span></div><button class="del" data-id="${h.id}">✕</button>`;
-    row.querySelector('.del').addEventListener('click', ()=>{
-      saveFoodHistory(getFoodHistory().filter(x=>x.id !== h.id));
-      renderFoodHistory();
+  dates.forEach(date=>{
+    const entries = byDate[date];
+    const total = entries.reduce((a,b)=>a+b.calories, 0);
+    const header = document.createElement('div');
+    header.className = 'day-group-header';
+    const d = new Date(date + 'T00:00:00');
+    const label = date === todayKey() ? 'Today' : d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+    header.innerHTML = `<span class="dg-date">${label}</span><span class="dg-total">${total} kcal total</span>`;
+    list.appendChild(header);
+
+    entries.forEach(h=>{
+      const row = document.createElement('div');
+      row.className = 'log-item';
+      row.innerHTML = `<div class="d"><span class="meal-type-tag">${MEAL_ICON[h.mealType]||''} ${esc(h.mealType||'')}</span><strong>${esc(h.food)}</strong><br><span style="color:var(--muted); font-size:12px;">${h.calories} cal · P${h.protein} C${h.carbs} F${h.fat}</span></div><button class="del" data-id="${h.id}">✕</button>`;
+      row.querySelector('.del').addEventListener('click', ()=>{
+        saveFoodHistory(getFoodHistory().filter(x=>x.id !== h.id));
+        renderMealHistory();
+      });
+      list.appendChild(row);
     });
-    list.appendChild(row);
   });
 }
 
@@ -1570,7 +1616,8 @@ renderDayPicker();
 renderExercises();
 renderRecipes();
 renderApiKeyStatus();
-renderFoodHistory();
+$('mtDate').value = todayKey();
+renderMealHistory();
 renderQuran();
 renderSabr();
 renderLog();
