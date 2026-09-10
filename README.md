@@ -17,3 +17,4 @@ Expected address: `https://hafizirshaadi.github.io/rihlah-app/`
 Open the published address in Safari, tap **Share**, choose **Add to Home Screen**, then **Add**. Open it once while online so offline files are cached.
 
 
+
