@@ -191,21 +191,23 @@
   /* gym sidebar shell */
   .gym-shell{
     display:flex;
-    gap:10px;
-    align-items:flex-start;
+    align-items:stretch;
     margin:0 -20px;
-    padding:0 20px;
     min-height:420px;
   }
   .gym-sidebar{
     background:var(--surface);
     border:1px solid var(--line);
-    border-radius:14px;
+    border-left:none;
+    border-radius:0 16px 16px 0;
     padding:10px 8px;
     width:150px;
     flex-shrink:0;
     transition:width .22s ease;
-    position:relative;
+    position:sticky;
+    top:0;
+    align-self:flex-start;
+    box-shadow:3px 0 14px rgba(0,0,0,.25);
   }
   .gym-sidebar.collapsed{width:52px;}
   .sidebar-toggle{
@@ -245,9 +247,8 @@
     min-width:0;
     background:var(--surface);
     border:1px solid var(--line);
-    border-radius:14px;
-    padding:18px 14px;
-    min-height:420px;
+    border-left:none;
+    padding:18px 20px 18px 16px;
   }
   .gym-content-panel{display:none;}
   .gym-content-panel.active{display:block; animation:fade .2s ease;}
@@ -684,6 +685,21 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
 // ---------- gym sidebar ----------
+function sizeGymSidebar(){
+  const header = document.querySelector('header.top');
+  const nav = document.querySelector('nav.tabs');
+  const sidebar = $('gymSidebar');
+  const content = document.querySelector('.gym-content');
+  if(!header || !nav || !sidebar) return;
+  const headerH = header.getBoundingClientRect().height;
+  const navH = nav.getBoundingClientRect().height;
+  const h = Math.max(300, window.innerHeight - headerH - navH);
+  sidebar.style.height = h + 'px';
+  if(content) content.style.minHeight = h + 'px';
+}
+window.addEventListener('resize', sizeGymSidebar);
+window.addEventListener('orientationchange', ()=> setTimeout(sizeGymSidebar, 200));
+
 $('sidebarToggle').addEventListener('click', ()=>{
   $('gymSidebar').classList.toggle('collapsed');
 });
@@ -718,6 +734,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     btn.classList.add('active');
     $('view-'+btn.dataset.view).classList.add('active');
     $('pageTitle').textContent = btn.dataset.title;
+    if(btn.dataset.view === 'gym') setTimeout(sizeGymSidebar, 50);
   });
 });
 // ---------- GYM ----------
@@ -1274,6 +1291,7 @@ $('logSave').addEventListener('click', ()=>{
 
 // ---------- init ----------
 renderGym();
+sizeGymSidebar();
 renderDayPicker();
 renderExercises();
 renderRecipes();
