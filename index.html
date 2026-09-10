@@ -311,6 +311,44 @@
   }
   .pi-input-small:focus{outline:none; color:var(--accent);}
 
+  /* name edit/save toggle */
+  .profile-name-display, .profile-name-edit{display:flex; align-items:center; gap:8px;}
+  .profile-name-display span{
+    font-family:'Fraunces',serif; font-weight:500; font-size:19px; color:var(--text);
+  }
+  .name-icon-btn{
+    width:26px; height:26px; border-radius:50%;
+    background:var(--surface-2); color:var(--accent);
+    border:1px solid var(--accent-dim);
+    font-size:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .name-icon-btn.save{background:var(--accent); color:#14181C; border-color:var(--accent);}
+  .profile-name-edit .profile-name-input{
+    background:var(--surface-2); border:1px solid var(--accent-dim); border-radius:8px;
+    font-family:'Fraunces',serif; font-weight:500; font-size:17px; color:var(--text);
+    padding:6px 10px; flex:1; min-width:0;
+  }
+  .profile-name-input:focus{outline:none;}
+
+  /* age scroll picker */
+  .profile-age-row{display:flex; align-items:center; gap:6px; font-size:13px; color:var(--muted); margin-top:6px;}
+  .profile-age-select{
+    background:var(--surface-2); border:1px solid var(--line); color:var(--accent);
+    font-family:'Fraunces',serif; font-size:14px; padding:4px 8px; border-radius:6px;
+  }
+
+  /* colorful section headers */
+  .section-h{display:flex; align-items:center; gap:6px;}
+  .glow-pink{color:#D1687A;}
+  .glow-orange{color:#E8935B;}
+  .glow-blue{color:#5B9BD9;}
+
+  /* colored body overview stat cards */
+  .stat-blue{background:color-mix(in srgb, #5B9BD9 14%, var(--surface-2)); border:1px solid color-mix(in srgb, #5B9BD9 30%, var(--line));}
+  .stat-orange{background:color-mix(in srgb, #E8935B 14%, var(--surface-2)); border:1px solid color-mix(in srgb, #E8935B 30%, var(--line));}
+  .stat-green{background:color-mix(in srgb, #6FA97A 14%, var(--surface-2)); border:1px solid color-mix(in srgb, #6FA97A 30%, var(--line));}
+  .stat-rose{background:color-mix(in srgb, #D1687A 14%, var(--surface-2)); border:1px solid color-mix(in srgb, #D1687A 30%, var(--line));}
+
   .greet-block{padding:4px 0 16px;}
   .greet-time{font-size:13px; color:var(--muted); letter-spacing:.02em;}
   .greet-name{
@@ -560,23 +598,36 @@
                 <input type="file" id="profilePhotoFile" accept="image/*" style="display:none;">
               </div>
               <div class="profile-header-info">
-                <input type="text" id="profName" class="profile-name-input" placeholder="Your name">
-                <input type="text" id="profEmail" class="profile-email-input" placeholder="you@email.com">
-                <div class="profile-age-row">📅 <input type="number" id="profAge" class="profile-age-input"> years old</div>
+                <div class="profile-name-display" id="profNameDisplay">
+                  <span id="profNameText">Tap to set name</span>
+                  <button class="name-icon-btn" id="profNameEditBtn">✎</button>
+                </div>
+                <div class="profile-name-edit" id="profNameEdit" style="display:none;">
+                  <input type="text" id="profNameInput" class="profile-name-input" placeholder="Your name">
+                  <button class="name-icon-btn save" id="profNameSaveBtn">✓</button>
+                </div>
+                <div class="profile-age-row">
+                  🎂
+                  <select id="profAge" class="profile-age-select"></select>
+                  <span>years old</span>
+                </div>
               </div>
             </div>
 
-            <h2 style="margin:20px 0 10px;">Body Overview</h2>
+            <h2 class="section-h glow-pink" style="margin:22px 0 8px;">💛 About Me</h2>
+            <textarea id="profBio" placeholder="Write something about your goals..." style="min-height:80px;"></textarea>
+
+            <h2 class="section-h glow-orange" style="margin:22px 0 10px;">🔥 Body Overview</h2>
             <div class="stat-grid">
-              <div class="stat"><div class="n"><input type="number" id="profHeight" class="stat-input"><span class="u">cm</span></div><div class="l">Height</div></div>
-              <div class="stat"><div class="n"><input type="number" id="profWeight" class="stat-input"><span class="u">kg</span></div><div class="l">Current Weight</div></div>
-              <div class="stat"><div class="n"><input type="number" id="profGoalWeight" class="stat-input"><span class="u">kg</span></div><div class="l">Goal Weight</div></div>
-              <div class="stat"><div class="n" id="profBmi">0</div><div class="l">BMI <span id="profBmiTag" class="bmi-tag"></span></div></div>
+              <div class="stat stat-blue"><div class="n"><input type="number" id="profHeight" class="stat-input"><span class="u">cm</span></div><div class="l">📏 Height</div></div>
+              <div class="stat stat-orange"><div class="n"><input type="number" id="profWeight" class="stat-input"><span class="u">kg</span></div><div class="l">⚖️ Current Weight</div></div>
+              <div class="stat stat-green"><div class="n"><input type="number" id="profGoalWeight" class="stat-input"><span class="u">kg</span></div><div class="l">🎯 Goal Weight</div></div>
+              <div class="stat stat-rose"><div class="n" id="profBmi">0</div><div class="l">📈 BMI <span id="profBmiTag" class="bmi-tag"></span></div></div>
             </div>
 
-            <h2 style="margin:20px 0 6px;">Personal Information</h2>
+            <h2 class="section-h glow-blue" style="margin:22px 0 6px;">📋 Personal Information</h2>
             <div class="pi-row">
-              <span class="pi-label">Gender</span>
+              <span class="pi-label">🚻 Gender</span>
               <select id="profGender" class="pi-input">
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
@@ -584,7 +635,7 @@
               </select>
             </div>
             <div class="pi-row">
-              <span class="pi-label">Activity Level</span>
+              <span class="pi-label">🏃 Activity Level</span>
               <select id="profActivity" class="pi-input">
                 <option>Sedentary</option>
                 <option>Lightly Active</option>
@@ -593,16 +644,13 @@
               </select>
             </div>
             <div class="pi-row">
-              <span class="pi-label">Body Fat Percentage</span>
+              <span class="pi-label">💧 Body Fat Percentage</span>
               <div class="pi-input-group"><input type="number" id="profBodyFat" class="pi-input-small"><span class="u">%</span></div>
             </div>
             <div class="pi-row">
-              <span class="pi-label">Waist</span>
+              <span class="pi-label">📐 Waist</span>
               <div class="pi-input-group"><input type="number" id="profWaist" class="pi-input-small"><span class="u">cm</span></div>
             </div>
-
-            <h2 style="margin:20px 0 8px;">About Me</h2>
-            <textarea id="profBio" placeholder="Write something about your goals..." style="min-height:80px;"></textarea>
           </div>
           <div class="gym-content-panel" data-section="workout"><p class="empty">Workout — empty for now.</p></div>
           <div class="gym-content-panel" data-section="mealtracker"><p class="empty">AI Meal Tracker — empty for now.</p></div>
@@ -914,11 +962,23 @@ function computeAndShowBmi(profile){
   $('profBmiTag').textContent = tag.label;
   $('profBmiTag').style.color = tag.color;
 }
+function populateAgeOptions(){
+  const sel = $('profAge');
+  if(sel.options.length > 0) return;
+  for(let i=1; i<=100; i++){
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = i;
+    sel.appendChild(opt);
+  }
+}
+
 function renderProfile(){
+  populateAgeOptions();
   const p = getProfile();
   $('profilePhoto').src = p.photo || 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72"><rect width="72" height="72" fill="%23242B3B"/><circle cx="36" cy="28" r="14" fill="%238D93A3"/><ellipse cx="36" cy="62" rx="24" ry="18" fill="%238D93A3"/></svg>');
-  $('profName').value = p.name === 'Tap to set name' ? '' : p.name;
-  $('profEmail').value = p.email;
+  $('profNameText').textContent = p.name === 'Tap to set name' ? 'Tap ✎ to set your name' : p.name;
+  $('profNameInput').value = p.name === 'Tap to set name' ? '' : p.name;
   $('profAge').value = p.age;
   $('profHeight').value = p.height;
   $('profWeight').value = p.weight;
@@ -937,11 +997,9 @@ function bindProfileField(id, key, isNumber){
     p[key] = isNumber ? (parseFloat(e.target.value) || 0) : e.target.value;
     saveProfile(p);
     if(key === 'height' || key === 'weight') computeAndShowBmi(p);
-    if(key === 'name' || key === 'weight' || key === 'height' || key === 'age') renderGym();
+    if(key === 'weight' || key === 'height' || key === 'age') renderGym();
   });
 }
-bindProfileField('profName', 'name', false);
-bindProfileField('profEmail', 'email', false);
 bindProfileField('profAge', 'age', true);
 bindProfileField('profHeight', 'height', true);
 bindProfileField('profWeight', 'weight', true);
@@ -951,6 +1009,23 @@ bindProfileField('profActivity', 'activityLevel', false);
 bindProfileField('profBodyFat', 'bodyFatPct', true);
 bindProfileField('profWaist', 'waist', true);
 bindProfileField('profBio', 'bio', false);
+
+// name edit / save toggle
+$('profNameEditBtn').addEventListener('click', ()=>{
+  $('profNameDisplay').style.display = 'none';
+  $('profNameEdit').style.display = 'flex';
+  $('profNameInput').focus();
+});
+$('profNameSaveBtn').addEventListener('click', ()=>{
+  const val = $('profNameInput').value.trim();
+  const p = getProfile();
+  p.name = val || 'Tap to set name';
+  saveProfile(p);
+  $('profNameText').textContent = p.name === 'Tap to set name' ? 'Tap ✎ to set your name' : p.name;
+  $('profNameEdit').style.display = 'none';
+  $('profNameDisplay').style.display = 'flex';
+  renderGym();
+});
 
 $('profilePhotoBtn').addEventListener('click', ()=> $('profilePhotoFile').click());
 $('profilePhotoFile').addEventListener('change', (e)=>{
