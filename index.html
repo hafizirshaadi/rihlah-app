@@ -200,7 +200,7 @@
     border:1px solid var(--line);
     border-left:none;
     border-radius:0 16px 16px 0;
-    padding:10px 8px;
+    padding:calc(10px + env(safe-area-inset-top)) 8px 10px;
     width:150px;
     flex-shrink:0;
     transition:width .22s ease;
@@ -248,10 +248,68 @@
     background:var(--surface);
     border:1px solid var(--line);
     border-left:none;
-    padding:18px 20px 18px 16px;
+    padding:calc(18px + env(safe-area-inset-top)) 20px 18px 16px;
   }
   .gym-content-panel{display:none;}
   .gym-content-panel.active{display:block; animation:fade .2s ease;}
+
+  /* profile */
+  .profile-header{display:flex; align-items:center; gap:14px;}
+  .profile-photo-wrap{position:relative; flex-shrink:0;}
+  .profile-photo{
+    width:72px; height:72px; border-radius:50%;
+    object-fit:cover;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+  }
+  .profile-photo-btn{
+    position:absolute; bottom:-2px; right:-2px;
+    width:26px; height:26px; border-radius:50%;
+    background:var(--accent); color:#14181C;
+    font-size:12px; display:flex; align-items:center; justify-content:center;
+    border:2px solid var(--surface);
+  }
+  .profile-header-info{flex:1; min-width:0;}
+  .profile-name-input{
+    background:transparent; border:none; border-bottom:1px solid transparent;
+    font-family:'Fraunces',serif; font-weight:500; font-size:19px; color:var(--text);
+    padding:2px 0; width:100%;
+  }
+  .profile-name-input:focus{border-bottom-color:var(--accent-dim); outline:none;}
+  .profile-email-input{
+    background:transparent; border:none; font-size:12.5px; color:var(--muted);
+    padding:2px 0; width:100%; margin-top:2px;
+  }
+  .profile-email-input:focus{outline:none; color:var(--text);}
+  .profile-age-row{display:flex; align-items:center; gap:5px; font-size:12.5px; color:var(--muted); margin-top:4px;}
+  .profile-age-input{
+    width:36px; background:var(--surface-2); border:1px solid var(--line);
+    color:var(--text); font-size:12.5px; padding:3px 5px; border-radius:5px; text-align:center;
+  }
+
+  .stat-input{
+    background:transparent; border:none; color:var(--accent);
+    font-family:'Fraunces',serif; font-size:20px; width:44px; padding:0;
+  }
+  .stat-input:focus{outline:none;}
+  .bmi-tag{font-size:11px; color:var(--accent); font-weight:600;}
+
+  .pi-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 4px; border-bottom:1px solid var(--line);
+  }
+  .pi-label{font-size:13.5px; color:var(--text);}
+  .pi-input{
+    background:transparent; border:none; color:var(--muted);
+    font-size:13px; text-align:right;
+  }
+  .pi-input:focus{outline:none; color:var(--accent);}
+  .pi-input-group{display:flex; align-items:center; gap:4px;}
+  .pi-input-small{
+    background:transparent; border:none; color:var(--muted);
+    font-size:13px; text-align:right; width:40px;
+  }
+  .pi-input-small:focus{outline:none; color:var(--accent);}
 
   .greet-block{padding:4px 0 16px;}
   .greet-time{font-size:13px; color:var(--muted); letter-spacing:.02em;}
@@ -466,7 +524,7 @@
 <body>
 <div class="app">
 
-  <header class="top">
+  <header class="top" id="appHeader">
     <div class="date" id="todayLabel"></div>
     <h1 id="pageTitle">Gym</h1>
   </header>
@@ -494,7 +552,58 @@
 
         <div class="gym-content">
           <div class="gym-content-panel active" data-section="dashboard"><p class="empty">Dashboard — empty for now.</p></div>
-          <div class="gym-content-panel" data-section="profile"><p class="empty">Profile — empty for now.</p></div>
+          <div class="gym-content-panel" data-section="profile">
+            <div class="profile-header">
+              <div class="profile-photo-wrap">
+                <img id="profilePhoto" class="profile-photo" src="" alt="">
+                <button class="profile-photo-btn" id="profilePhotoBtn">📷</button>
+                <input type="file" id="profilePhotoFile" accept="image/*" style="display:none;">
+              </div>
+              <div class="profile-header-info">
+                <input type="text" id="profName" class="profile-name-input" placeholder="Your name">
+                <input type="text" id="profEmail" class="profile-email-input" placeholder="you@email.com">
+                <div class="profile-age-row">📅 <input type="number" id="profAge" class="profile-age-input"> years old</div>
+              </div>
+            </div>
+
+            <h2 style="margin:20px 0 10px;">Body Overview</h2>
+            <div class="stat-grid">
+              <div class="stat"><div class="n"><input type="number" id="profHeight" class="stat-input"><span class="u">cm</span></div><div class="l">Height</div></div>
+              <div class="stat"><div class="n"><input type="number" id="profWeight" class="stat-input"><span class="u">kg</span></div><div class="l">Current Weight</div></div>
+              <div class="stat"><div class="n"><input type="number" id="profGoalWeight" class="stat-input"><span class="u">kg</span></div><div class="l">Goal Weight</div></div>
+              <div class="stat"><div class="n" id="profBmi">0</div><div class="l">BMI <span id="profBmiTag" class="bmi-tag"></span></div></div>
+            </div>
+
+            <h2 style="margin:20px 0 6px;">Personal Information</h2>
+            <div class="pi-row">
+              <span class="pi-label">Gender</span>
+              <select id="profGender" class="pi-input">
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="pi-row">
+              <span class="pi-label">Activity Level</span>
+              <select id="profActivity" class="pi-input">
+                <option>Sedentary</option>
+                <option>Lightly Active</option>
+                <option>Moderately Active</option>
+                <option>Very Active</option>
+              </select>
+            </div>
+            <div class="pi-row">
+              <span class="pi-label">Body Fat Percentage</span>
+              <div class="pi-input-group"><input type="number" id="profBodyFat" class="pi-input-small"><span class="u">%</span></div>
+            </div>
+            <div class="pi-row">
+              <span class="pi-label">Waist</span>
+              <div class="pi-input-group"><input type="number" id="profWaist" class="pi-input-small"><span class="u">cm</span></div>
+            </div>
+
+            <h2 style="margin:20px 0 8px;">About Me</h2>
+            <textarea id="profBio" placeholder="Write something about your goals..." style="min-height:80px;"></textarea>
+          </div>
           <div class="gym-content-panel" data-section="workout"><p class="empty">Workout — empty for now.</p></div>
           <div class="gym-content-panel" data-section="mealtracker"><p class="empty">AI Meal Tracker — empty for now.</p></div>
           <div class="gym-content-panel" data-section="recipes"><p class="empty">Recipes — empty for now.</p></div>
@@ -724,7 +833,12 @@ const daysAgoKey = n => {
 const load = (k,fallback) => { try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } };
 const save = (k,v) => localStorage.setItem(k, JSON.stringify(v));
 
+function updateHeaderVisibility(view){
+  $('appHeader').style.display = (view === 'gym') ? 'none' : '';
+}
+
 $('todayLabel').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long', day:'numeric', month:'long'});
+updateHeaderVisibility('gym');
 
 // ---------- nav ----------
 document.querySelectorAll('.tab-btn').forEach(btn=>{
@@ -734,11 +848,18 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     btn.classList.add('active');
     $('view-'+btn.dataset.view).classList.add('active');
     $('pageTitle').textContent = btn.dataset.title;
+    updateHeaderVisibility(btn.dataset.view);
     if(btn.dataset.view === 'gym') setTimeout(sizeGymSidebar, 50);
   });
 });
 // ---------- GYM ----------
-function getProfile(){ return load('profile_v1', { name:'Tap to set name', weight:70, height:175, age:25 }); }
+function getProfile(){
+  return load('profile_v1', {
+    name:'Tap to set name', weight:70, height:175, age:25,
+    email:'', goalWeight:70, gender:'Male', activityLevel:'Moderately Active',
+    bodyFatPct:18, waist:82, bio:'', photo:''
+  });
+}
 function saveProfile(p){ save('profile_v1', p); }
 function getOverview(){
   return load('overview_v1', {
@@ -778,7 +899,84 @@ function renderGym(){
   });
 }
 
-// tap name to edit
+// ---------- profile section ----------
+function bmiTag(bmi){
+  if(bmi < 18.5) return { label:'Underweight', color:'#5B9BD9' };
+  if(bmi < 25) return { label:'Normal', color:'#6FA97A' };
+  if(bmi < 30) return { label:'Overweight', color:'#E8935B' };
+  return { label:'Obese', color:'#D1687A' };
+}
+function computeAndShowBmi(profile){
+  const h = profile.height / 100;
+  const bmi = h > 0 ? (profile.weight / (h*h)) : 0;
+  $('profBmi').textContent = bmi.toFixed(1);
+  const tag = bmiTag(bmi);
+  $('profBmiTag').textContent = tag.label;
+  $('profBmiTag').style.color = tag.color;
+}
+function renderProfile(){
+  const p = getProfile();
+  $('profilePhoto').src = p.photo || 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72"><rect width="72" height="72" fill="%23242B3B"/><circle cx="36" cy="28" r="14" fill="%238D93A3"/><ellipse cx="36" cy="62" rx="24" ry="18" fill="%238D93A3"/></svg>');
+  $('profName').value = p.name === 'Tap to set name' ? '' : p.name;
+  $('profEmail').value = p.email;
+  $('profAge').value = p.age;
+  $('profHeight').value = p.height;
+  $('profWeight').value = p.weight;
+  $('profGoalWeight').value = p.goalWeight;
+  $('profGender').value = p.gender;
+  $('profActivity').value = p.activityLevel;
+  $('profBodyFat').value = p.bodyFatPct;
+  $('profWaist').value = p.waist;
+  $('profBio').value = p.bio;
+  computeAndShowBmi(p);
+}
+
+function bindProfileField(id, key, isNumber){
+  $(id).addEventListener('input', (e)=>{
+    const p = getProfile();
+    p[key] = isNumber ? (parseFloat(e.target.value) || 0) : e.target.value;
+    saveProfile(p);
+    if(key === 'height' || key === 'weight') computeAndShowBmi(p);
+    if(key === 'name' || key === 'weight' || key === 'height' || key === 'age') renderGym();
+  });
+}
+bindProfileField('profName', 'name', false);
+bindProfileField('profEmail', 'email', false);
+bindProfileField('profAge', 'age', true);
+bindProfileField('profHeight', 'height', true);
+bindProfileField('profWeight', 'weight', true);
+bindProfileField('profGoalWeight', 'goalWeight', true);
+bindProfileField('profGender', 'gender', false);
+bindProfileField('profActivity', 'activityLevel', false);
+bindProfileField('profBodyFat', 'bodyFatPct', true);
+bindProfileField('profWaist', 'waist', true);
+bindProfileField('profBio', 'bio', false);
+
+$('profilePhotoBtn').addEventListener('click', ()=> $('profilePhotoFile').click());
+$('profilePhotoFile').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    img.onload = ()=>{
+      const size = 200;
+      const canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const scale = Math.max(size/img.width, size/img.height);
+      const w = img.width*scale, h = img.height*scale;
+      ctx.drawImage(img, (size-w)/2, (size-h)/2, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      const p = getProfile();
+      p.photo = dataUrl;
+      saveProfile(p);
+      $('profilePhoto').src = dataUrl;
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
 $('greetName').addEventListener('click', ()=>{
   const profile = getProfile();
   const val = prompt('Your name:', profile.name === 'Tap to set name' ? '' : profile.name);
@@ -1291,6 +1489,7 @@ $('logSave').addEventListener('click', ()=>{
 
 // ---------- init ----------
 renderGym();
+renderProfile();
 sizeGymSidebar();
 renderDayPicker();
 renderExercises();

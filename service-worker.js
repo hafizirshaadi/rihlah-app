@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rihlah-v12';
+const CACHE_NAME = 'rihlah-v13';
 const FILES_TO_CACHE = [
   './',
   './index.html',
