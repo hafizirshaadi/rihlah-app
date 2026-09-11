@@ -359,6 +359,13 @@
     font-size:10.5px; color:var(--accent); background:var(--surface-2);
     padding:2px 7px; border-radius:6px; margin-right:6px; display:inline-block;
   }
+  .confidence-tag{
+    font-size:11.5px; font-weight:600; padding:4px 10px; border-radius:20px;
+    background:color-mix(in srgb, #6FA97A 18%, var(--surface-2));
+    color:#6FA97A; white-space:nowrap;
+  }
+  .confidence-tag.low{background:color-mix(in srgb, #D1687A 18%, var(--surface-2)); color:#D1687A;}
+  .confidence-tag.mid{background:color-mix(in srgb, #E8935B 18%, var(--surface-2)); color:#E8935B;}
 
   .greet-block{padding:4px 0 16px;}
   .greet-time{font-size:13px; color:var(--muted); letter-spacing:.02em;}
@@ -672,16 +679,27 @@
               <img id="mtImgPreview" style="width:100%; border-radius:10px; display:block;">
             </div>
             <input type="file" id="mtFile" accept="image/*" capture="environment" style="display:none;">
-            <button class="btn-ghost" id="mtFileBtn" style="width:100%; text-align:center;">📷 Take / choose photo</button>
+            <input type="file" id="mtGalleryFile" accept="image/*" style="display:none;">
+            <div class="row" style="gap:8px;">
+              <button class="btn-ghost" id="mtFileBtn" style="flex:1; text-align:center;">📷 Take photo</button>
+              <button class="btn-ghost" id="mtGalleryBtn" style="flex:1; text-align:center;">🖼️ Gallery</button>
+            </div>
 
             <textarea id="mtDesc" placeholder="Describe the food (e.g. nasi lemak with ayam goreng, extra sambal)" style="margin-top:10px;"></textarea>
 
             <button class="btn-primary" id="mtSend" style="margin-top:10px;">Analyze</button>
             <p class="sub" id="mtStatus" style="display:none; text-align:center; margin:10px 0 0;">Analyzing...</p>
 
+            <div class="card" id="mtNotFood" style="display:none; margin-top:14px; border-color:var(--danger);">
+              <p style="margin:0; color:var(--danger); font-size:14px;" id="mtNotFoodMsg"></p>
+            </div>
+
             <div class="card" id="mtResult" style="display:none; margin-top:14px;">
-              <h2 id="mtResultName">Result</h2>
-              <div class="stat-grid" style="grid-template-columns:repeat(4,1fr); gap:8px;">
+              <div class="row between">
+                <h2 id="mtResultName" style="margin:0;">Result</h2>
+                <span class="confidence-tag" id="mtConfidence"></span>
+              </div>
+              <div class="stat-grid" style="grid-template-columns:repeat(4,1fr); gap:8px; margin-top:10px;">
                 <div class="stat stat-orange"><div class="n" id="mtCal">0</div><div class="l">🔥 Calories</div></div>
                 <div class="stat stat-rose"><div class="n" id="mtPro">0</div><div class="l">🥩 Protein g</div></div>
                 <div class="stat stat-blue"><div class="n" id="mtCarb">0</div><div class="l">🍚 Carbs g</div></div>
@@ -1366,9 +1384,7 @@ function getFoodHistory(){ return load('food_history_v1', []); }
 function saveFoodHistory(h){ save('food_history_v1', h); }
 
 let mtImageBase64 = null;
-$('mtFileBtn').addEventListener('click', ()=> $('mtFile').click());
-$('mtFile').addEventListener('change', (e)=>{
-  const file = e.target.files[0];
+function handleMtImageFile(file){
   if(!file) return;
   const img = new Image();
   const reader = new FileReader();
@@ -1389,7 +1405,17 @@ $('mtFile').addEventListener('change', (e)=>{
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
-});
+}
+$('mtFileBtn').addEventListener('click', ()=> $('mtFile').click());
+$('mtFile').addEventListener('change', (e)=> handleMtImageFile(e.target.files[0]));
+$('mtGalleryBtn').addEventListener('click', ()=> $('mtGalleryFile').click());
+$('mtGalleryFile').addEventListener('change', (e)=> handleMtImageFile(e.target.files[0]));
+
+function confidenceTagClass(pct){
+  if(pct >= 75) return '';
+  if(pct >= 50) return 'mid';
+  return 'low';
+}
 
 $('mtSend').addEventListener('click', async ()=>{
   const apiKey = getApiKey();
@@ -1399,14 +1425,21 @@ $('mtSend').addEventListener('click', async ()=>{
 
   $('mtStatus').style.display = 'block';
   $('mtResult').style.display = 'none';
+  $('mtNotFood').style.display = 'none';
   $('mtSend').disabled = true;
 
   const promptText = `You are a nutrition estimator for a food-tracking app. The user is based in Malaysia and commonly eats Malaysian-style food (e.g. nasi lemak, roti canai, mee goreng, nasi kandar, laksa, satay, kuih, teh tarik). Use that context when estimating portions and ingredients typical to Malaysian cooking (coconut milk, sambal, oil-fried items, etc), unless the description or photo clearly indicates otherwise.
 
 User description: "${desc || '(no description given, rely on the photo)'}"
 
-Estimate the food identity and its nutrition for the single serving shown/described. Respond with ONLY raw JSON, no markdown, no code fences, in exactly this shape:
-{"food":"short name","calories":number,"protein":number,"carbs":number,"fat":number}`;
+First, verify this is genuinely a plausible food/drink item a person would eat — using the photo if one is provided, and the description. If a photo is provided and it does NOT show real food (e.g. it shows a person, an object, an animal, a blank/unclear image, or anything that isn't edible food/drink), OR if the description clearly contradicts what's shown in the photo, set "isFood" to false and write a short, polite, clear message telling the user their photo doesn't appear to show real food and asking them to upload a genuine food photo.
+
+If it IS genuinely food, set "isFood" to true and estimate its nutrition for the single serving shown/described, plus a "confidence" score from 0 to 100 representing how confident you are in this specific identification and nutrition estimate (higher when the photo clearly shows a well-identifiable dish that matches the description; lower when relying only on a vague text description, an unclear photo, or a food that's hard to portion-estimate).
+
+Respond with ONLY raw JSON, no markdown, no code fences, in exactly this shape:
+{"isFood":true,"food":"short name","calories":number,"protein":number,"carbs":number,"fat":number,"confidence":number,"message":""}
+or, if not food:
+{"isFood":false,"food":"","calories":0,"protein":0,"carbs":0,"fat":0,"confidence":0,"message":"short polite rejection message"}`;
 
   const parts = [{ text: promptText }];
   if(mtImageBase64){
@@ -1427,14 +1460,22 @@ Estimate the food identity and its nutrition for the single serving shown/descri
     text = text.replace(/```json|```/g, '').trim();
     const result = JSON.parse(text);
 
-    $('mtResultName').textContent = result.food || 'Result';
-    $('mtCal').textContent = Math.round(result.calories || 0);
-    $('mtPro').textContent = Math.round(result.protein || 0);
-    $('mtCarb').textContent = Math.round(result.carbs || 0);
-    $('mtFat').textContent = Math.round(result.fat || 0);
-    $('mtResult').style.display = 'block';
-    $('mtResult').dataset.pending = JSON.stringify(result);
-    $('mtDate').value = todayKey();
+    if(result.isFood === false){
+      $('mtNotFoodMsg').textContent = result.message || "This doesn't look like food — please upload a real food picture.";
+      $('mtNotFood').style.display = 'block';
+    } else {
+      const conf = Math.round(result.confidence || 0);
+      $('mtResultName').textContent = result.food || 'Result';
+      $('mtCal').textContent = Math.round(result.calories || 0);
+      $('mtPro').textContent = Math.round(result.protein || 0);
+      $('mtCarb').textContent = Math.round(result.carbs || 0);
+      $('mtFat').textContent = Math.round(result.fat || 0);
+      $('mtConfidence').textContent = 'Confidence: ' + conf + '%';
+      $('mtConfidence').className = 'confidence-tag ' + confidenceTagClass(conf);
+      $('mtResult').style.display = 'block';
+      $('mtResult').dataset.pending = JSON.stringify(result);
+      $('mtDate').value = todayKey();
+    }
   } catch(err){
     alert('Could not analyze: ' + err.message);
   } finally {
